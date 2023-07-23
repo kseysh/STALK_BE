@@ -1,2 +1,6 @@
 venv
 secrets.json
+migrations
+__pycache__
+__init__.py
+db.sqlite3
