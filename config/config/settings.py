@@ -30,6 +30,8 @@ INSTALLED_APPS = [
     'django.contrib.sites',
     # my app
     'accounts',
+    'sonification',
+    'conversion',
     # django rest framework
     'rest_framework',
     'rest_framework.authtoken',
@@ -42,6 +44,8 @@ INSTALLED_APPS = [
     'allauth.account',
     'allauth.socialaccount',
     'allauth.socialaccount.providers.kakao',
+  
+
 ]
 
 REST_FRAMEWORK = {
