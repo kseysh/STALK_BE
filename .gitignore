@@ -1,5 +1,6 @@
 venv
 secrets.json
+launch.json
 migrations
 __pycache__
 __init__.py
