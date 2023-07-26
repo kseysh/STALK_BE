@@ -9,8 +9,10 @@ from allauth.socialaccount.providers.oauth2.client import OAuth2Client
 from allauth.socialaccount.models import SocialAccount
 from .models import User
 
-#BASE_URL = 'http://127.0.0.1:8000/'
-BASE_URL = 'https://stalk.digital/' 
+if not settings.DEBUG:
+    BASE_URL = 'http://127.0.0.1:8000/'
+else:
+    BASE_URL = 'https://stalksound.store/' 
 
 KAKAO_CALLBACK_URI = BASE_URL + 'accounts/kakao/callback/'
 
@@ -24,13 +26,23 @@ def kakao_login(request):
 
 def kakao_callback(request):
     rest_api_key = getattr(settings, 'KAKAO_REST_API_KEY')
+    client_secret_key = getattr(settings, 'KAKAO_CLIENT_SECRET_KEY')
     code = request.GET.get("code")
-    redirect_uri = KAKAO_CALLBACK_URI
+    kakao_token_uri = "https://kauth.kakao.com/oauth/token"
     """
     Access Token Request
     """
-    token_req = requests.get(
-        f"https://kauth.kakao.com/oauth/token?grant_type=authorization_code&client_id={rest_api_key}&redirect_uri={redirect_uri}&code={code}")
+    request_data = {
+            'grant_type': 'authorization_code',
+            'client_id': rest_api_key,
+            'redirect_uri': KAKAO_CALLBACK_URI,
+            'client_secret': client_secret_key,
+            'code': code,
+        }
+    token_headers = {
+            'Content-type': 'application/x-www-form-urlencoded;charset=utf-8'
+        }
+    token_req = requests.post(kakao_token_uri, data=request_data, headers=token_headers)
     token_req_json = token_req.json()
     error = token_req_json.get("error")
 

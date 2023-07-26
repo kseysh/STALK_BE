@@ -16,9 +16,23 @@ for key, value in secrets.items():
 
 AUTH_USER_MODEL = 'accounts.User'
 
-DEBUG = False
+DEBUG = True
 
-ALLOWED_HOSTS = []
+
+if not DEBUG:
+    LOGIN_REDIRECT_URL = 'http://127.0.0.1:8000/accounts/kakao/callback/' 
+else:
+    LOGIN_REDIRECT_URL = 'https://stalksound.store/accounts/kakao/callback/' 
+if not DEBUG:
+    ACCOUNT_LOGOUT_REDIRECT_URL = 'http://127.0.0.1:8000/accounts/kakao/callback/'
+else:
+    ACCOUNT_LOGOUT_REDIRECT_URL = 'https://stalksound.store/accounts/kakao/callback/'
+
+SOCIALACCOUNT_LOGIN_ON_GET = True # 중간 창 없이 카카오 로그인 페이지로 넘어가게 하는 설정
+
+ACCOUNT_LOGOUT_ON_GET = True  # 로그아웃 요청시 즉시 로그아웃 하는 설정
+
+ALLOWED_HOSTS = ['*']
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -84,12 +98,7 @@ TEMPLATES = [
     },
 ]
 
-SOCIALACCOUNT_LOGIN_ON_GET = True # 중간 창 없이 카카오 로그인 페이지로 넘어가게 하는 설정
-#LOGIN_REDIRECT_URL = 'http://127.0.0.1:8000/' 
-LOGIN_REDIRECT_URL = 'http://stalk.digital/' 
-#ACCOUNT_LOGOUT_REDIRECT_URL = 'http://127.0.0.1:8000/'
-ACCOUNT_LOGOUT_REDIRECT_URL = 'http://stalk.digital/'
-ACCOUNT_LOGOUT_ON_GET = True  # 로그아웃 요청시 즉시 로그아웃 하는 설정
+
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
@@ -116,6 +125,8 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
 LANGUAGE_CODE = 'ko-kr'
 
 TIME_ZONE = 'Asia/Seoul'
@@ -127,6 +138,23 @@ USE_L10N = True
 USE_TZ = True
 
 STATIC_URL = '/static/'
+
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+
+CORS_ORIGIN_ALLOW_ALL = True
+
+CORS_ALLOW_CREDENTIALS = True
+
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SAMESITE = 'None'
+SESSION_COOKIE_SAMESITE = 'None'
+
+SWAGGER_SETTINGS = {
+    'SECURITY_DEFINITIONS': {
+        'scheme' : 'https',
+    },
+}
 
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None # username 필드 사용 x
 ACCOUNT_EMAIL_REQUIRED = True # email 필드 사용 o
