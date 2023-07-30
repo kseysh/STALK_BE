@@ -57,7 +57,7 @@ INSTALLED_APPS = [
     # django rest framework
     'rest_framework',
     'rest_framework.authtoken',
-    'rest_framework_simplejwt.token_blacklist',
+    'rest_framework_simplejwt',
     'dj_rest_auth',
     'dj_rest_auth.registration',
     # django-allauth
@@ -176,8 +176,8 @@ AUTHENTICATION_BACKENDS = [
 #ACCOUNT_USER_MODEL_USERNAME_FIELD = None # username 필드 사용 x
 ACCOUNT_EMAIL_VERIFICATION = "none" # 이메일 확인을 끔
 ACCOUNT_EMAIL_REQUIRED = True # email 필드 사용 o
-ACCOUNT_USERNAME_REQUIRED = True # username 필드 사용 x
-ACCOUNT_AUTHENTICATION_METHOD = 'username'
+ACCOUNT_USERNAME_REQUIRED = True # username 필드 사용 o
+ACCOUNT_AUTHENTICATION_METHOD = 'user_id'
 
 REST_USE_JWT = True
 
@@ -186,6 +186,22 @@ SIMPLE_JWT = {
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'ROTATE_REFRESH_TOKENS': False,
     'BLACKLIST_AFTER_ROTATION': True,
+    'SIGNING_KEY':SECRET_KEY,
+    'VERIFYING_KEY':None,
+    'JWK_URL':None,
+    'AUTH_HEADER_TYPES':('Bearer',),
+    'AUTH_HEADER_NAME': 'HTTP_AUTHORIZATION',
+    'USER_ID_FIELD': 'id',
+    'USER_ID_CLAIM': 'user_id',
+    'USER_AUTHENTICATION_RULE': 'rest_framework_simplejwt.authentication.default_user_authentication_rule',
+    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
+    'TOKEN_TYPE_CLAIM': 'token_type',
+    'TOKEN_USER_CLASS': 'rest_framework_simplejwt.models.TokenUser',
+    'JTI_CLAIM': 'jti',
+    'SLIDING_TOKEN_REFRESH_EXP_CLAIM': 'refresh_exp',
+    'SLIDING_TOKEN_LIFETIME': timedelta(minutes=5),
+    'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=1),
+
 }
 
 
