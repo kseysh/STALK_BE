@@ -1,29 +1,24 @@
+from datetime import timedelta
 from pathlib import Path
-import json, os
-from django.core.exceptions import ImproperlyConfigured
+import json, os, sys
 
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-secret_file = BASE_DIR / 'secrets.json'  
+ROOT_DIR = os.path.dirname(BASE_DIR)
+SECRET_PATH = os.path.join(ROOT_DIR, '.footprint_secret')
+SECRET_BASE_FILE = os.path.join(BASE_DIR, 'secrets.json')
 
-with open(secret_file) as file:
-    secrets = json.loads(file.read())
+secrets = json.loads(open(SECRET_BASE_FILE).read())
+for key, value in secrets.items():
+    setattr(sys.modules[__name__], key, value)
 
-def get_secret(setting,secrets_dict = secrets):
-    try:
-        return secrets_dict[setting]
-    except KeyError:
-        error_msg = f'Set the {setting} environment variable'
-        raise ImproperlyConfigured(error_msg)
+AUTH_USER_MODEL = 'accounts.User'
 
-SECRET_KEY = get_secret('SECRET_KEY')
-
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = []
-
-
 
 INSTALLED_APPS = [
     'rest_framework',
@@ -33,11 +28,38 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.sites',
+    # my app
+    'accounts',
     'sonification',
     'conversion',
-    # 'django.contrib.staticfiles',
+    # django rest framework
+    'rest_framework',
+    'rest_framework.authtoken',
+    'rest_framework_simplejwt.token_blacklist',
+    # dj-rest-auth
+    'dj_rest_auth',
+    'dj_rest_auth.registration',
+    # django-allauth
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.kakao',
+    # swagger
     'drf_yasg',
 ]
+
+REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework.authentication.SessionAuthentication',
+        'dj_rest_auth.jwt_auth.JWTCookieAuthentication',
+    ),
+}
+
+SITE_ID = 1
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -66,6 +88,13 @@ TEMPLATES = [
         },
     },
 ]
+
+SOCIALACCOUNT_LOGIN_ON_GET = True # 중간 창 없이 카카오 로그인 페이지로 넘어가게 하는 설정
+#LOGIN_REDIRECT_URL = 'http://127.0.0.1:8000/' 
+LOGIN_REDIRECT_URL = 'http://stalk.digital/' 
+#ACCOUNT_LOGOUT_REDIRECT_URL = 'http://127.0.0.1:8000/'
+ACCOUNT_LOGOUT_REDIRECT_URL = 'http://stalk.digital/'
+ACCOUNT_LOGOUT_ON_GET = True  # 로그아웃 요청시 즉시 로그아웃 하는 설정
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
@@ -98,8 +127,27 @@ TIME_ZONE = 'Asia/Seoul'
 
 USE_I18N = True
 
+USE_L10N = True
+
 USE_TZ = True
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+ACCOUNT_USER_MODEL_USERNAME_FIELD = None # username 필드 사용 x
+ACCOUNT_EMAIL_REQUIRED = True # email 필드 사용 o
+ACCOUNT_USERNAME_REQUIRED = False # username 필드 사용 x
+ACCOUNT_AUTHENTICATION_METHOD = 'email'
+
+REST_USE_JWT = True
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=2),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': False,
+    'BLACKLIST_AFTER_ROTATION': True,
+}
+
+AUTHENTICATION_BACKENDS = [
+    'allauth.account.auth_backends.AuthenticationBackend',
+]
+
