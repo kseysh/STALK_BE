@@ -1,7 +1,6 @@
 import requests
 from django.shortcuts import redirect
 from django.conf import settings
-from django.contrib import auth
 from django.http import JsonResponse
 from rest_framework import status
 from dj_rest_auth.registration.views import SocialLoginView
@@ -66,44 +65,58 @@ def kakao_callback(request):
         error = profile_json.get("error")
         if error is not None:
             raise ValueError(error)
-        user_id = profile_json["id"]
-        user_nickname = profile_json['kakao_account']["profile"]["nickname"]
-        user_email = profile_json["kakao_account"].get("email")
+        username = profile_json["id"]
+        nickname = profile_json['kakao_account']["profile"]["nickname"]
+        email = profile_json["kakao_account"]["email"]
     else:
         raise ValueError(profile_request.status_code)
+    """
+    kakao_account에서 이메일 외에
+    카카오톡 프로필 이미지, 배경 이미지 url 가져올 수 있음
+    print(kakao_account) 참고
+    """
 
-    try: # 이미 회원가입이 된 유저를 로그인 처리
-        user = User.objects.get(user_id=user_id) # 만약 username이 같은 유저가 없다면
-
-        auth.login(user)
-
-        user_data = {
-            'user_id':user_id,
-            'user_email':user_email,
-            'user_nickname':user_nickname
-        }
-        
-        return JsonResponse(user_data)
+    #username = payload_data.get('nickname')
+    #email = payload_data.get('email')
+    """
+    Signup or Signin Request
+    """
+    try:
+        user = User.objects.get(username=username)
+        # 기존에 가입된 유저의 Provider가 kakao가 아니면 에러 발생, 맞으면 로그인
+        # 다른 SNS로 가입된 유저
+        social_user = SocialAccount.objects.get(user=user)
+        if social_user is None:
+            return JsonResponse({'err_msg': 'email exists but not social user'}, status=status.HTTP_400_BAD_REQUEST)
+        # if social_user.provider != 'kakao':
+        #     return JsonResponse({'err_msg': 'no matching social type'}, status=status.HTTP_400_BAD_REQUEST)
+        # 기존에 Google로 가입된 유저
+        data = {'access_token': access_token, 'code': code}
+        accept = requests.post(
+            f"{BASE_URL}accounts/kakao/login/finish/", data=data)
+        accept_status = accept.status_code
+        if accept_status != 200:
+            return JsonResponse({'err_msg': 'failed to signin'}, status=accept_status)
+        accept_json = accept.json()
+        accept_json.pop('user', None)
+        return JsonResponse(accept_json)
     except User.DoesNotExist:
-        user = User.objects.create_user(
-            user_id = user_id,
-            user_email = user_email,
-            user_nickname = user_nickname
-        )
-
-        auth.login(user)
-
-        user_data = {
-            'user_id':user_id,
-            'user_email':user_email,
-            'user_nickname':user_nickname
-        }
-
-        return JsonResponse(user_data)
+        # 기존에 가입된 유저가 없으면 새로 가입
+        data = {'access_token': access_token, 'code': code}
+        accept = requests.post(
+            #f"{BASE_URL}accounts/kakao/login/finish/", data=data)
+            f"http://127.0.0.1:8000/accounts/kakao/login/finish/", data=data)
+        accept_status = accept.status_code
+        if accept_status != 200:
+            #return JsonResponse({'err_msg': 'failed to signup'}, status=accept_status)
+            raise Exception(accept.status_code)
+        # user의 pk, email, first name, last name과 Access Token, Refresh token 가져옴
+        accept_json = accept.json()
+        accept_json.pop('user', None)
+        return JsonResponse(accept_json)
 
 
 class KakaoLogin(SocialLoginView):
     adapter_class = kakao_view.KakaoOAuth2Adapter
     client_class = OAuth2Client
     callback_url = KAKAO_CALLBACK_URI
-
