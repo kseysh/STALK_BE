@@ -1,9 +1,10 @@
 venv
 secrets.json
-launch.json
+.vscode
 migrations
 __pycache__
 __init__.py
 db.sqlite3
+static
 token.dat
 static

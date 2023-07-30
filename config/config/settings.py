@@ -1,24 +1,48 @@
 from datetime import timedelta
 from pathlib import Path
 import json, os, sys
+from django.core.exceptions import ImproperlyConfigured
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-ROOT_DIR = os.path.dirname(BASE_DIR)
-SECRET_PATH = os.path.join(ROOT_DIR, '.footprint_secret')
-SECRET_BASE_FILE = os.path.join(BASE_DIR, 'secrets.json')
+secret_file = BASE_DIR / 'secrets.json'  
 
-secrets = json.loads(open(SECRET_BASE_FILE).read())
-for key, value in secrets.items():
-    setattr(sys.modules[__name__], key, value)
+with open(secret_file) as file:
+    secrets = json.loads(file.read())
+
+def get_secret(setting,secrets_dict = secrets):
+    try:
+        return secrets_dict[setting]
+    except KeyError:
+        error_msg = f'Set the {setting} environment variable'
+        raise ImproperlyConfigured(error_msg)
+
+SECRET_KEY = get_secret('SECRET_KEY')
+KAKAO_REST_API_KEY = get_secret('KAKAO_REST_API_KEY')
+KAKAO_CLIENT_SECRET_KEY = get_secret('KAKAO_CLIENT_SECRET_KEY')
+
 
 AUTH_USER_MODEL = 'accounts.User'
 
-DEBUG = False
+DEBUG = True
 
-ALLOWED_HOSTS = []
+
+# if not DEBUG:
+#     LOGIN_REDIRECT_URL = 'http://localhost:8000/' 
+# else:
+#     LOGIN_REDIRECT_URL = 'https://stalksound.store/' 
+# if not DEBUG:
+#     ACCOUNT_LOGOUT_REDIRECT_URL = 'http://127.0.0.1:8000/'
+# else:
+#     ACCOUNT_LOGOUT_REDIRECT_URL = 'https://stalksound.store/'
+
+SOCIALACCOUNT_LOGIN_ON_GET = True # 중간 창 없이 카카오 로그인 페이지로 넘어가게 하는 설정
+
+ACCOUNT_LOGOUT_ON_GET = True  # 로그아웃 요청시 즉시 로그아웃 하는 설정
+
+ALLOWED_HOSTS = ['*']
 
 INSTALLED_APPS = [
     'rest_framework',
@@ -37,7 +61,6 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'rest_framework_simplejwt.token_blacklist',
-    # dj-rest-auth
     'dj_rest_auth',
     'dj_rest_auth.registration',
     # django-allauth
@@ -89,12 +112,7 @@ TEMPLATES = [
     },
 ]
 
-SOCIALACCOUNT_LOGIN_ON_GET = True # 중간 창 없이 카카오 로그인 페이지로 넘어가게 하는 설정
-#LOGIN_REDIRECT_URL = 'http://127.0.0.1:8000/' 
-LOGIN_REDIRECT_URL = 'http://stalk.digital/' 
-#ACCOUNT_LOGOUT_REDIRECT_URL = 'http://127.0.0.1:8000/'
-ACCOUNT_LOGOUT_REDIRECT_URL = 'http://stalk.digital/'
-ACCOUNT_LOGOUT_ON_GET = True  # 로그아웃 요청시 즉시 로그아웃 하는 설정
+
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
@@ -121,6 +139,8 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
 LANGUAGE_CODE = 'ko-kr'
 
 TIME_ZONE = 'Asia/Seoul'
@@ -133,10 +153,36 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
-ACCOUNT_USER_MODEL_USERNAME_FIELD = None # username 필드 사용 x
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+
+CORS_ORIGIN_ALLOW_ALL = True
+
+CORS_ALLOW_CREDENTIALS = True
+
+CSRF_COOKIE_SECURE = True
+
+SESSION_COOKIE_SECURE = True
+
+CSRF_COOKIE_SAMESITE = 'None'
+
+SESSION_COOKIE_SAMESITE = 'None'
+
+SWAGGER_SETTINGS = {
+    'SECURITY_DEFINITIONS': {
+        'scheme' : 'https',
+    },
+}
+
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
+]
+
+#ACCOUNT_USER_MODEL_USERNAME_FIELD = None # username 필드 사용 x
+ACCOUNT_EMAIL_VERIFICATION = "none" # 이메일 확인을 끔
 ACCOUNT_EMAIL_REQUIRED = True # email 필드 사용 o
-ACCOUNT_USERNAME_REQUIRED = False # username 필드 사용 x
-ACCOUNT_AUTHENTICATION_METHOD = 'email'
+ACCOUNT_USERNAME_REQUIRED = True # username 필드 사용 x
+ACCOUNT_AUTHENTICATION_METHOD = 'username'
 
 REST_USE_JWT = True
 
@@ -147,7 +193,5 @@ SIMPLE_JWT = {
     'BLACKLIST_AFTER_ROTATION': True,
 }
 
-AUTHENTICATION_BACKENDS = [
-    'allauth.account.auth_backends.AuthenticationBackend',
-]
+
 
