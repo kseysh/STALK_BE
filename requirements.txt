@@ -1,0 +1,5 @@
+numpy==1.25.1
+scipy==1.11.1
+sounddevice==0.4.6
+pydub==0.25.1
+SpeechRecognition==3.10.0

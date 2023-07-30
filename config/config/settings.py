@@ -45,6 +45,7 @@ ACCOUNT_LOGOUT_ON_GET = True  # 로그아웃 요청시 즉시 로그아웃 하�
 ALLOWED_HOSTS = ['*']
 
 INSTALLED_APPS = [
+    'rest_framework',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -54,6 +55,8 @@ INSTALLED_APPS = [
     'django.contrib.sites',
     # my app
     'accounts',
+    'sonification',
+    'conversion',
     # django rest framework
     'rest_framework',
     'rest_framework.authtoken',
@@ -65,6 +68,8 @@ INSTALLED_APPS = [
     'allauth.account',
     'allauth.socialaccount',
     'allauth.socialaccount.providers.kakao',
+    # swagger
+    'drf_yasg',
 ]
 
 REST_FRAMEWORK = {
