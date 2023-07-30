@@ -4,18 +4,22 @@ from scipy.io import wavfile
 import mojito
 from django.http import HttpResponse, JsonResponse
 from rest_framework.decorators import api_view
+from .models import User, Stock, Record, UserStock
+from rest_framework.response import Response
+from .serializers import StockSerializer, RecordSerializer, UserStockSerializer
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
-f = open("../../koreainvestment.key")
-lines = f.readlines()
-key = lines[0].strip()
-secret = lines[1].strip()
-acc_no = lines[2].strip()
-f.close()
+
+INVEST_KEY = get_secret('INVEST_KEY')
+INVEST_SECRET_KEY = get_secret('INVEST_SECRET_KEY')
+INVEST_ACC_NO = get_secret('INVEST_ACC_NO')
+
 
 broker = mojito.KoreaInvestment(
-    api_key=key,
-    api_secret=secret,
-    acc_no=acc_no,
+    api_key=INVEST_KEY,
+    api_secret=INVEST_SECRET_KEY,
+    acc_no=INVEST_ACC_NO,
     mock=True
 )
 
@@ -37,10 +41,19 @@ def generate_sine_wave(duration, frequency, sample_rate=44100):
 ##############################################################################################################
 
 #그냥 현재가
-@api_view(['POST'])
+@swagger_auto_schema(
+    method='get',
+    operation_id='현재 주가 확인 및 사용자 투자종목 업데이트',
+    operation_description='현재 주가 확인 및 사용자 투자종목 업데이트',
+    tags=['DATA']
+)
+@api_view(['GET'])
 def now_data(request):
     data = request.data
-    symbol = data.get('symbol')
+    symbol = request.GET.get('symbol')
+    if not symbol:
+        return JsonResponse({'error': 'Symbol not provided'}, status=400)
+    
     resp = broker.fetch_price(symbol)
     chart_data = { 
         '전일대비부호': resp['output']['prdy_vrss_sign'],
@@ -50,15 +63,25 @@ def now_data(request):
         '고가': resp['output']['stck_hgpr'],
         '저가': resp['output']['stck_lwpr']
     }
+
+    stock = Stock.objects.get(symbol=symbol)
+    user_stock = UserStock.objects.get(stock=stock)
+    stock.profit_loss = resp['output']['stck_prpr']*user_stock.having_qunatitiy - user_stock.price
+    user_stock.save()
     return JsonResponse({'chart_data': chart_data}, safe=True)
 
 #일봉(설정일 기준 30일 전까지 나옴)
-@api_view(['POST'])
+@swagger_auto_schema(
+    method='get',
+    operation_id='일봉 조회',
+    operation_description='일봉 데이터를 조회합니다',
+    tags=['DATA'],
+)
+@api_view(['GET'])
 def il_bong(request):
-    data = request.data 
-    symbol = data.get('symbol')
-    begin = data.get('begin')
-    end = data.get('end')
+    symbol = request.GET.get('symbol')
+    begin = request.GET.get('begin')
+    end = request.GET.get('end')
     resp = broker.fetch_ohlcv(
         start_day=begin, #YYYYMMDD 형식 지킬 것
         end_day=end,
@@ -88,8 +111,16 @@ def il_bong(request):
     return JsonResponse({'data': data, 'lista': lista}, safe=True)
 
 #분봉 (30분전 까지 탐색)
-@api_view(['POST'])
-def boon_bong(symbol,end):
+@swagger_auto_schema(
+    method='get',
+    operation_id='분봉 조회',
+    operation_description='분봉 데이터를 조회합니다',
+    tags=['DATA'],
+)
+@api_view(['GET'])
+def boon_bong(request,symbol,end):
+    symbol = request.GET.get('symbol')
+    end = request.GET.get('end')
     result = broker._fetch_today_1m_ohlcv(symbol,end)
     daily_price = result['output2']
     jm = result['output1']['hts_kor_isnm'] ##종목 ㅋㅋ
@@ -125,3 +156,123 @@ def data_to_sound(request):
     response = HttpResponse(wav_stream.getvalue(), content_type='audio/wav')
     response['Content-Disposition'] = 'attachment; filename="Sine.wav"'
     return response
+
+##############################################################################################################
+
+@api_view(['GET'])
+def my_stocks(request):
+    try:
+        user = request.user
+        user_stocks = user.stocks.all()
+        user_records = user.records.all()
+        user_stock = UserStock.objects.get(user=user, stock=user_stocks)
+        stock_data = StockSerializer(user_stocks, many=True).data
+        record_data = RecordSerializer(user_records, many=True)
+        user_stock_data = RecordSerializer(user_stock, many=True)
+        return Response({'stock_data' : stock_data , 'record_data' : record_data, 'user_stock_data' : user_stock_data})
+    except User.DoesNotExist:
+        return Response({'error': '없는 유저입니다'}, status=404)
+    
+@swagger_auto_schema(
+    method='post',
+    operation_id='매도',
+    operation_description='매도하기',
+    tags=['transaction'],
+)
+@api_view(['POST'])
+def sell(request):
+    stock_symbol = request.data.get('stock_symbol')
+    quantity = request.data.get('quantity')
+    resp = broker.fetch_price(stock_symbol)
+    to_price = int(resp['output']['stck_prpr'])*quantity
+    # user = request.user
+
+    ##### 로그인 구현전이라 ######
+
+    user_id = request.data.get('user_id')
+    user = User.objects.get(pk=user_id)
+
+    try:
+        stock = Stock.objects.get(symbol=stock_symbol)
+    except Stock.DoesNotExist:
+        return Response({"error": "없는 종목입니다"}, status=400)
+    
+    user_stock = UserStock.objects.get(user=user, stock=stock)
+    if to_price <= user_stock.price:
+        user.money += to_price
+        user_stock.price -= to_price
+        user.save()
+    user_stock.having_quantity -= quantity
+    user_stock.save()
+
+    record = Record.objects.create(
+        user = user,
+        stock = stock,
+        transaction_type = '판매',
+        quantity = quantity,
+        price = to_price,
+        left_money = user.money + to_price
+    )
+    
+    stock_data = StockSerializer(stock).data
+    user_stock_data = UserStockSerializer(user_stock).data
+    record_data = RecordSerializer(record).data
+    return Response({"message": "판매완료","stock": stock_data,"user_stock": user_stock_data, "record": record_data}, status=200)
+
+@swagger_auto_schema(
+    method='post',
+    operation_id='매수',
+    operation_description='매수하기',
+    tags=['transaction'],
+)
+@api_view(['POST'])
+def buy(request):
+    stock_symbol = request.data.get('stock_symbol')
+    quantity = request.data.get('quantity')
+    resp = broker.fetch_price(stock_symbol)
+    to_price = int(resp['output']['stck_prpr'])*quantity
+    # user = request.user
+
+    ##### 로그인 구현전이라 ######
+
+    user_id = request.data.get('user_id')
+    user = User.objects.get(pk=user_id)
+
+    try:
+        stock = Stock.objects.get(symbol=stock_symbol)
+    except Stock.DoesNotExist:
+        return Response({"error": "없는 종목입니다"}, status=400)
+    print(user.money)
+    if user.money >= to_price:
+        user.money -= to_price
+        user.save()
+    else:
+        return Response({"error":"돈이 부족합니다"}, status=400)
+    print(user.money)
+    
+    try:
+        user_stock = UserStock.objects.get(user=user, stock=stock)
+        user_stock.price += to_price
+        user_stock.having_quantity += quantity
+        user_stock.save()
+    except UserStock.DoesNotExist:
+        user_stock = UserStock.objects.create(
+        user=user,
+        stock=stock,
+        having_quantity=quantity,
+        profit_loss=0
+        )
+
+    record = Record.objects.create(
+        user = user,
+        stock = stock,
+        transaction_type = '구매',
+        quantity = quantity,
+        price = to_price,
+        left_money = user.money
+    )
+    
+    stock_data = StockSerializer(stock).data
+    user_stock_data = UserStockSerializer(user_stock).data
+    record_data = RecordSerializer(record).data
+    return Response({"message": "구매완료","stock": stock_data,"user_stock": user_stock_data, "record": record_data}, status=200)
