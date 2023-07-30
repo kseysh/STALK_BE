@@ -35,6 +35,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'sonification',
     'conversion',
+    # 'django.contrib.staticfiles',
+    'drf_yasg',
 ]
 
 MIDDLEWARE = [
