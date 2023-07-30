@@ -26,15 +26,17 @@ ALLOWED_HOSTS = []
 
 
 INSTALLED_APPS = [
+    'rest_framework',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-  
     'sonification',
     'conversion',
+    # 'django.contrib.staticfiles',
+    'drf_yasg',
 ]
 
 MIDDLEWARE = [
