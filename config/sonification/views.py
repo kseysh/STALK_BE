@@ -188,16 +188,15 @@ def my_stocks(request):
     except User.DoesNotExist:
         return Response({'error': '없는 유저입니다'}, status=404)
 
-class SellRequestSerializer(serializers.Serializer):
-    stock_symbol = serializers.CharField()
-    quantity = serializers.IntegerField()
+# class SellRequestSerializer(serializers.Serializer):
+#     stock_symbol = serializers.CharField()
+#     quantity = serializers.IntegerField()
 
 @swagger_auto_schema(
     method='post',
     operation_id='매도',
     operation_description='매도하기',
     tags=['transaction'],
-    request_body=
 )
 @api_view(['POST'])
 def sell(request):
