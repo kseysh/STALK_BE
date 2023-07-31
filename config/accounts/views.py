@@ -9,13 +9,12 @@ from allauth.socialaccount.providers.oauth2.client import OAuth2Client
 from allauth.socialaccount.models import SocialAccount
 from .models import User
 
-if not settings.DEBUG:
+if settings.DEBUG:
     BASE_URL = 'http://localhost:8000/'
 else:
     BASE_URL = 'https://stalksound.store/'
 
-#KAKAO_CALLBACK_URI = 'http://localhost:8000/accounts/kakao/callback/'
-KAKAO_CALLBACK_URI = 'http://127.0.0.1:8000/accounts/callback/'
+KAKAO_CALLBACK_URI = 'https://stalksound.store/accounts/callback/'
 
 def kakao_login(request):
     rest_api_key = settings.KAKAO_REST_API_KEY
@@ -105,11 +104,11 @@ def kakao_callback(request):
         data = {'access_token': access_token, 'code': code}
         accept = requests.post(
             #f"{BASE_URL}accounts/kakao/login/finish/", data=data)
-            f"http://127.0.0.1:8000/accounts/kakao/login/finish/", data=data)
+            f"{BASE_URL}accounts/kakao/login/finish/", data=data)
         accept_status = accept.status_code
-        if accept_status != 200:
+        #if accept_status != 200:
             #return JsonResponse({'err_msg': 'failed to signup'}, status=accept_status)
-            raise Exception(accept.status_code)
+            #raise Exception(accept.status_code)
         # user의 pk, email, first name, last name과 Access Token, Refresh token 가져옴
         accept_json = accept.json()
         accept_json.pop('user', None)

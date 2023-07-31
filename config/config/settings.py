@@ -22,7 +22,9 @@ def get_secret(setting,secrets_dict = secrets):
 SECRET_KEY = get_secret('SECRET_KEY')
 KAKAO_REST_API_KEY = get_secret('KAKAO_REST_API_KEY')
 KAKAO_CLIENT_SECRET_KEY = get_secret('KAKAO_CLIENT_SECRET_KEY')
-
+INVEST_KEY = get_secret('INVEST_KEY')
+INVEST_SECRET_KEY = get_secret('INVEST_SECRET_KEY')
+INVEST_ACC_NO = get_secret('INVEST_ACC_NO')
 
 AUTH_USER_MODEL = 'accounts.User'
 
@@ -45,7 +47,6 @@ ACCOUNT_LOGOUT_ON_GET = True  # 로그아웃 요청시 즉시 로그아웃 하�
 ALLOWED_HOSTS = ['*']
 
 INSTALLED_APPS = [
-    'rest_framework',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
