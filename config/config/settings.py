@@ -18,12 +18,9 @@ def get_secret(setting,secrets_dict = secrets):
         raise ImproperlyConfigured(error_msg)
 
 SECRET_KEY = get_secret('SECRET_KEY')
-
 DEBUG = True
 
 ALLOWED_HOSTS = []
-
-
 
 INSTALLED_APPS = [
     'rest_framework',
@@ -50,6 +47,16 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'config.urls'
+
+REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.TokenAuthentication', # 원하는 경우 TokenAuthentication 추가
+    ],
+}
 
 TEMPLATES = [
     {

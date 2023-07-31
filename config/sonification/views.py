@@ -1,4 +1,5 @@
 from io import BytesIO
+from django.conf import settings
 import numpy as np
 from scipy.io import wavfile
 import mojito
@@ -10,16 +11,17 @@ from .serializers import StockSerializer, RecordSerializer, UserStockSerializer
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
-
-INVEST_KEY = get_secret('INVEST_KEY')
-INVEST_SECRET_KEY = get_secret('INVEST_SECRET_KEY')
-INVEST_ACC_NO = get_secret('INVEST_ACC_NO')
-
+f = open("../koreainvestment.key")
+lines = f.readlines()
+key = lines[0].strip()
+secret = lines[1].strip()
+acc_no = lines[2].strip()
+f.close()
 
 broker = mojito.KoreaInvestment(
-    api_key=INVEST_KEY,
-    api_secret=INVEST_SECRET_KEY,
-    acc_no=INVEST_ACC_NO,
+    api_key=key,
+    api_secret=secret,
+    acc_no=acc_no,
     mock=True
 )
 
@@ -45,11 +47,13 @@ def generate_sine_wave(duration, frequency, sample_rate=44100):
     method='get',
     operation_id='현재 주가 확인 및 사용자 투자종목 업데이트',
     operation_description='현재 주가 확인 및 사용자 투자종목 업데이트',
-    tags=['DATA']
+    tags=['DATA'],
+    manual_parameters=[
+        openapi.Parameter('symbol', in_=openapi.IN_QUERY, description='종목코드', type=openapi.TYPE_STRING),
+    ],
 )
 @api_view(['GET'])
 def now_data(request):
-    data = request.data
     symbol = request.GET.get('symbol')
     if not symbol:
         return JsonResponse({'error': 'Symbol not provided'}, status=400)
@@ -76,6 +80,11 @@ def now_data(request):
     operation_id='일봉 조회',
     operation_description='일봉 데이터를 조회합니다',
     tags=['DATA'],
+    manual_parameters=[
+        openapi.Parameter('symbol', in_=openapi.IN_QUERY, description='종목코드', type=openapi.TYPE_STRING),
+        openapi.Parameter('begin', in_=openapi.IN_QUERY, description='시작일(YYYYMMDD 형식)', type=openapi.TYPE_STRING),
+        openapi.Parameter('end', in_=openapi.IN_QUERY, description='종료일(YYYYMMDD 형식)', type=openapi.TYPE_STRING),
+    ],
 )
 @api_view(['GET'])
 def il_bong(request):
@@ -113,9 +122,13 @@ def il_bong(request):
 #분봉 (30분전 까지 탐색)
 @swagger_auto_schema(
     method='get',
-    operation_id='분봉 조회',
-    operation_description='분봉 데이터를 조회합니다',
+    operation_id='일봉 조회',
+    operation_description='일봉 데이터를 조회합니다',
     tags=['DATA'],
+    manual_parameters=[
+        openapi.Parameter('symbol', in_=openapi.IN_QUERY, description='종목코드', type=openapi.TYPE_STRING),
+        openapi.Parameter('end', in_=openapi.IN_QUERY, description='종료일(YYYYMMDD 형식)', type=openapi.TYPE_STRING),
+    ],
 )
 @api_view(['GET'])
 def boon_bong(request,symbol,end):
@@ -172,12 +185,17 @@ def my_stocks(request):
         return Response({'stock_data' : stock_data , 'record_data' : record_data, 'user_stock_data' : user_stock_data})
     except User.DoesNotExist:
         return Response({'error': '없는 유저입니다'}, status=404)
-    
+
+class SellRequestSerializer(serializers.Serializer):
+    stock_symbol = serializers.CharField()
+    quantity = serializers.IntegerField()
+
 @swagger_auto_schema(
     method='post',
     operation_id='매도',
     operation_description='매도하기',
     tags=['transaction'],
+    request_body=
 )
 @api_view(['POST'])
 def sell(request):
