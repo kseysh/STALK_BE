@@ -4,12 +4,12 @@ from scipy.io import wavfile
 import mojito
 from django.http import HttpResponse, JsonResponse
 from rest_framework.decorators import api_view
-from .models import User, Stock, Record, UserStock
+from .models import Stock, Record, UserStock
+from accounts.models import User
 from rest_framework.response import Response
 from .serializers import StockSerializer, RecordSerializer, UserStockSerializer
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
-from django.conf import settings
 
 f = open("./koreainvestment.key")
 lines = f.readlines()
@@ -207,7 +207,7 @@ def sell(request):
     
     user_stock = UserStock.objects.get(user=user, stock=stock)
     if to_price <= user_stock.price:
-        user.money += to_price
+        user.user_property += to_price
         user_stock.price -= to_price
         user.save()
     user_stock.having_quantity -= quantity
@@ -219,7 +219,7 @@ def sell(request):
         transaction_type = '판매',
         quantity = quantity,
         price = to_price,
-        left_money = user.money + to_price
+        left_money = user.user_property + to_price
     )
     
     stock_data = StockSerializer(stock).data
@@ -250,13 +250,13 @@ def buy(request):
         stock = Stock.objects.get(symbol=stock_symbol)
     except Stock.DoesNotExist:
         return Response({"error": "없는 종목입니다"}, status=400)
-    print(user.money)
-    if user.money >= to_price:
-        user.money -= to_price
+
+    if user.user_property >= to_price:
+        user.user_property -= to_price
         user.save()
     else:
         return Response({"error":"돈이 부족합니다"}, status=400)
-    print(user.money)
+
     
     try:
         user_stock = UserStock.objects.get(user=user, stock=stock)
@@ -277,7 +277,7 @@ def buy(request):
         transaction_type = '구매',
         quantity = quantity,
         price = to_price,
-        left_money = user.money
+        left_money = user.user_property
     )
     
     stock_data = StockSerializer(stock).data
