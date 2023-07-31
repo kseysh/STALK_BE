@@ -36,8 +36,8 @@ class UserManager(BaseUserManager):
 
 
 class User(AbstractUser):
-    email = models.EmailField(max_length=255)
-
+    user_email = models.EmailField(verbose_name= "이메일",max_length=255)
+    user_property = models.IntegerField(verbose_name= "돈",default=0)
     USERNAME_FIELD = 'username'
     REQUIRED_FIELDS = []
 
