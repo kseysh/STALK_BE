@@ -9,19 +9,22 @@ from rest_framework.response import Response
 from .serializers import StockSerializer, RecordSerializer, UserStockSerializer
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+from django.conf import settings
 
-
-INVEST_KEY = get_secret('INVEST_KEY')
-INVEST_SECRET_KEY = get_secret('INVEST_SECRET_KEY')
-INVEST_ACC_NO = get_secret('INVEST_ACC_NO')
-
+f = open("./koreainvestment.key")
+lines = f.readlines()
+key = lines[0].strip()
+secret = lines[1].strip()
+acc_no = lines[2].strip()
+f.close()
 
 broker = mojito.KoreaInvestment(
-    api_key=INVEST_KEY,
-    api_secret=INVEST_SECRET_KEY,
-    acc_no=INVEST_ACC_NO,
+    api_key=key,
+    api_secret=secret,
+    acc_no=acc_no,
     mock=True
 )
+
 
 #값의 변화량을 주파수로 치환하는 함수
 def substitution(mx,mn,chart):
@@ -71,13 +74,18 @@ def now_data(request):
     return JsonResponse({'chart_data': chart_data}, safe=True)
 
 #일봉(설정일 기준 30일 전까지 나옴)
-@swagger_auto_schema(
-    method='get',
-    operation_id='일봉 조회',
-    operation_description='일봉 데이터를 조회합니다',
-    tags=['DATA'],
-)
-@api_view(['GET'])
+# @api_view(['GET'])
+# @swagger_auto_schema(
+#     manual_parameters=[
+#         openapi.Parameter('symbol',in_=openapi.IN_QUERY, description='종목코드',type=openapi.TYPE_STRING),
+#         openapi.Parameter('begin',in_=openapi.IN_QUERY, description='종목코드',type=openapi.TYPE_STRING),
+#         openapi.Parameter('end',in_=openapi.IN_QUERY, description='종목코드',type=openapi.TYPE_STRING),
+#     ],
+#     method='get',
+#     operation_id='일봉 조회',
+#     operation_description='일봉 데이터를 조회합니다',
+#     tags=['DATA'],
+# )
 def il_bong(request):
     symbol = request.GET.get('symbol')
     begin = request.GET.get('begin')
@@ -111,13 +119,13 @@ def il_bong(request):
     return JsonResponse({'data': data, 'lista': lista}, safe=True)
 
 #분봉 (30분전 까지 탐색)
-@swagger_auto_schema(
-    method='get',
-    operation_id='분봉 조회',
-    operation_description='분봉 데이터를 조회합니다',
-    tags=['DATA'],
-)
-@api_view(['GET'])
+# @swagger_auto_schema(
+#     method='get',
+#     operation_id='분봉 조회',
+#     operation_description='분봉 데이터를 조회합니다',
+#     tags=['DATA'],
+# )
+# @api_view(['GET'])
 def boon_bong(request,symbol,end):
     symbol = request.GET.get('symbol')
     end = request.GET.get('end')
