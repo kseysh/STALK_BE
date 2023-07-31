@@ -10,6 +10,7 @@ from rest_framework.response import Response
 from .serializers import StockSerializer, RecordSerializer, UserStockSerializer
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+from django.conf import settings
 
 f = open("../koreainvestment.key")
 lines = f.readlines()
@@ -24,6 +25,7 @@ broker = mojito.KoreaInvestment(
     acc_no=acc_no,
     mock=True
 )
+
 
 #값의 변화량을 주파수로 치환하는 함수
 def substitution(mx,mn,chart):
