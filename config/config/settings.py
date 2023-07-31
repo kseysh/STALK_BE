@@ -22,14 +22,9 @@ def get_secret(setting,secrets_dict = secrets):
 SECRET_KEY = get_secret('SECRET_KEY')
 KAKAO_REST_API_KEY = get_secret('KAKAO_REST_API_KEY')
 KAKAO_CLIENT_SECRET_KEY = get_secret('KAKAO_CLIENT_SECRET_KEY')
-INVEST_KEY = get_secret('INVEST_KEY')
-INVEST_SECRET_KEY = get_secret('INVEST_SECRET_KEY')
-INVEST_ACC_NO = get_secret('INVEST_ACC_NO')
 
 AUTH_USER_MODEL = 'accounts.User'
-
-DEBUG = True
-
+DEBUG = False
 
 # if not DEBUG:
 #     LOGIN_REDIRECT_URL = 'http://localhost:8000/' 
@@ -96,6 +91,16 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'config.urls'
+
+REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.TokenAuthentication', # 원하는 경우 TokenAuthentication 추가
+    ],
+}
 
 TEMPLATES = [
     {
