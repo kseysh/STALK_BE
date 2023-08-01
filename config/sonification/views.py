@@ -1,4 +1,5 @@
 from io import BytesIO
+import os
 from django.conf import settings
 import numpy as np
 from scipy.io import wavfile
@@ -11,8 +12,15 @@ from rest_framework.response import Response
 from .serializers import StockSerializer, RecordSerializer, UserStockSerializer
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
-f = open("../koreainvestment.key")
+from rest_framework.authentication import SessionAuthentication, BasicAuthentication
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework import permissions 
+
+
+f = open("./koreainvestment.key")
 lines = f.readlines()
 key = lines[0].strip()
 secret = lines[1].strip()
@@ -25,7 +33,6 @@ broker = mojito.KoreaInvestment(
     acc_no=acc_no,
     mock=True
 )
-
 
 #값의 변화량을 주파수로 치환하는 함수
 def substitution(mx,mn,chart):
@@ -76,7 +83,7 @@ def now_data(request):
     user_stock.save()
     return JsonResponse({'chart_data': chart_data}, safe=True)
 
-#일봉(설정일 기준 30일 전까지 나옴)
+####일봉####
 @swagger_auto_schema(
     method='get',
     operation_id='일봉 조회',
@@ -89,10 +96,13 @@ def now_data(request):
     ],
 )
 @api_view(['GET'])
+@authentication_classes([SessionAuthentication,BasicAuthentication])
+@permission_classes([permissions.AllowAny])
 def il_bong(request):
     symbol = request.GET.get('symbol')
-    begin = request.GET.get('begin')
-    end = request.GET.get('end')
+    begin = request.GET.get('begin') 
+    end = request.GET.get('end') 
+    print(symbol)
     resp = broker.fetch_ohlcv(
         start_day=begin, #YYYYMMDD 형식 지킬 것
         end_day=end,
@@ -100,8 +110,11 @@ def il_bong(request):
         timeframe='D',  
         adj_price=True
     )
+    print(resp)
     daily_price = resp['output2']
+    print(daily_price)
     jm = resp['output1']['hts_kor_isnm'] #종목 ㅋㅋ
+    print(jm)
     chart= []
     data=[]
     mx = 0 ; mn = 0
@@ -122,18 +135,33 @@ def il_bong(request):
     return JsonResponse({'data': data, 'lista': lista}, safe=True)
 
 #분봉 (30분전 까지 탐색)
+# @swagger_auto_schema(
+#     method='get',
+#     operation_id='일봉 조회',
+#     operation_description='일봉 데이터를 조회합니다',
+#     tags=['DATA'],
+#     manual_parameters=[
+#         openapi.Parameter('symbol', in_=openapi.IN_QUERY, description='종목코드', type=openapi.TYPE_STRING),
+#         openapi.Parameter('end', in_=openapi.IN_QUERY, description='종료일(YYYYMMDD 형식)', type=openapi.TYPE_STRING),
+#     ],
+# )
+
+####분봉####
 @swagger_auto_schema(
     method='get',
-    operation_id='일봉 조회',
-    operation_description='일봉 데이터를 조회합니다',
+    operation_id='분봉 조회',
+    operation_description='분봉 데이터를 조회합니다',
     tags=['DATA'],
     manual_parameters=[
         openapi.Parameter('symbol', in_=openapi.IN_QUERY, description='종목코드', type=openapi.TYPE_STRING),
-        openapi.Parameter('end', in_=openapi.IN_QUERY, description='종료일(YYYYMMDD 형식)', type=openapi.TYPE_STRING),
+        openapi.Parameter('end', in_=openapi.IN_QUERY, description='종료시간(HHMMSS 형식)', type=openapi.TYPE_STRING)
     ],
 )
 @api_view(['GET'])
-def boon_bong(request,symbol,end):
+@authentication_classes([SessionAuthentication,BasicAuthentication])
+@permission_classes([permissions.AllowAny])
+def boon_bong(request):
+    print(request)
     symbol = request.GET.get('symbol')
     end = request.GET.get('end')
     result = broker._fetch_today_1m_ohlcv(symbol,end)
@@ -157,6 +185,8 @@ def boon_bong(request,symbol,end):
         mn = min(mn,int(dp['stck_lwpr']))
     lista = substitution(mx,mn,chart)
     return JsonResponse({'data': data, 'lista': lista}, safe=False)
+
+####차트 음향화####
 
 @api_view(['POST'])
 def data_to_sound(request):
