@@ -18,6 +18,8 @@ from rest_framework.response import Response
 from rest_framework.authentication import SessionAuthentication, BasicAuthentication
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework import permissions 
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg.openapi import Schema, TYPE_ARRAY, TYPE_NUMBER
 
 
 f = open("./koreainvestment.key")
@@ -70,10 +72,8 @@ def now_data(request):
     if not symbol:
         return JsonResponse({'error': 'Symbol not provided'}, status=400)
     resp = broker.fetch_price(symbol)
-    jm = resp['output']['hts_kor_isnm'] #종목 ㅋㅋ
     print(resp)
     chart_data = { 
-        "종목": jm,
         '전일대비부호': resp['output']['prdy_vrss_sign'],
         '전일 대비율': resp['output']['prdy_ctrt'],
         '시가': resp['output']['stck_oprc'],
@@ -81,7 +81,6 @@ def now_data(request):
         '고가': resp['output']['stck_hgpr'],
         '저가': resp['output']['stck_lwpr']
     }
-
     # stock = Stock.objects.get(symbol=symbol)
     # user_stock = UserStock.objects.get(stock=stock)
     # stock.profit_loss = resp['output']['stck_prpr']*user_stock.having_qunatitiy - user_stock.price
@@ -139,18 +138,6 @@ def il_bong(request):
     lista = substitution(mx,mn,chart)
     return JsonResponse({'data': data, 'lista': lista}, safe=True)
 
-#분봉 (30분전 까지 탐색)
-# @swagger_auto_schema(
-#     method='get',
-#     operation_id='일봉 조회',
-#     operation_description='일봉 데이터를 조회합니다',
-#     tags=['DATA'],
-#     manual_parameters=[
-#         openapi.Parameter('symbol', in_=openapi.IN_QUERY, description='종목코드', type=openapi.TYPE_STRING),
-#         openapi.Parameter('end', in_=openapi.IN_QUERY, description='종료일(YYYYMMDD 형식)', type=openapi.TYPE_STRING),
-#     ],
-# )
-
 ####분봉####
 @swagger_auto_schema(
     method='get',
@@ -192,8 +179,21 @@ def boon_bong(request):
     return JsonResponse({'data': data, 'lista': lista}, safe=False)
 
 ####차트 음향화####
-
+@swagger_auto_schema(
+    method='post',
+    operation_id='data_to_sound',
+    operation_description='데이터를 소리로 변환',
+    tags=['sound'],
+    request_body=Schema(
+        type=TYPE_ARRAY,
+        items=Schema(
+            type=TYPE_NUMBER,
+        ),
+    ),
+)
 @api_view(['POST'])
+@authentication_classes([SessionAuthentication,BasicAuthentication])
+@permission_classes([permissions.AllowAny])
 def data_to_sound(request):
     data = request.data.get('lista')
     duration = 0.5
