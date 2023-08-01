@@ -1,14 +1,9 @@
 from django.db import models
-
+from accounts.models import User
 
 class Stock(models.Model):
     symbol = models.CharField(max_length=10, unique=True)
     name = models.CharField(max_length=100) 
-
-class User(models.Model):
-    name = models.CharField(max_length=15,unique=True)
-    money = models.IntegerField()
-    # stocks = models.ManyToManyField(Stock, through='UserStock', related_name='users', blank=True)
 
 class UserStock(models.Model):
     stock = models.ForeignKey(Stock, on_delete=models.CASCADE)
@@ -16,6 +11,8 @@ class UserStock(models.Model):
     having_quantity = models.IntegerField()
     price = models.IntegerField()
     profit_loss = models.IntegerField()
+
+    
 
 class Record(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='records', default=1)
