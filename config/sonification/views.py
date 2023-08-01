@@ -61,14 +61,19 @@ def generate_sine_wave(duration, frequency, sample_rate=44100):
         openapi.Parameter('symbol', in_=openapi.IN_QUERY, description='종목코드', type=openapi.TYPE_STRING),
     ],
 )
+
 @api_view(['GET'])
+@authentication_classes([SessionAuthentication,BasicAuthentication])
+@permission_classes([permissions.AllowAny])
 def now_data(request):
     symbol = request.GET.get('symbol')
     if not symbol:
         return JsonResponse({'error': 'Symbol not provided'}, status=400)
-    
     resp = broker.fetch_price(symbol)
+    jm = resp['output']['hts_kor_isnm'] #종목 ㅋㅋ
+    print(resp)
     chart_data = { 
+        "종목": jm,
         '전일대비부호': resp['output']['prdy_vrss_sign'],
         '전일 대비율': resp['output']['prdy_ctrt'],
         '시가': resp['output']['stck_oprc'],
@@ -77,10 +82,10 @@ def now_data(request):
         '저가': resp['output']['stck_lwpr']
     }
 
-    stock = Stock.objects.get(symbol=symbol)
-    user_stock = UserStock.objects.get(stock=stock)
-    stock.profit_loss = resp['output']['stck_prpr']*user_stock.having_qunatitiy - user_stock.price
-    user_stock.save()
+    # stock = Stock.objects.get(symbol=symbol)
+    # user_stock = UserStock.objects.get(stock=stock)
+    # stock.profit_loss = resp['output']['stck_prpr']*user_stock.having_qunatitiy - user_stock.price
+    # user_stock.save()
     return JsonResponse({'chart_data': chart_data}, safe=True)
 
 ####일봉####
@@ -205,6 +210,8 @@ def data_to_sound(request):
 ##############################################################################################################
 
 @api_view(['GET'])
+@authentication_classes([SessionAuthentication,BasicAuthentication])
+@permission_classes([permissions.AllowAny])
 def my_stocks(request):
     try:
         user = request.user
@@ -225,6 +232,8 @@ def my_stocks(request):
     tags=['transaction'],
 )
 @api_view(['POST'])
+@authentication_classes([SessionAuthentication,BasicAuthentication])
+@permission_classes([permissions.AllowAny])
 def sell(request):
     stock_symbol = request.data.get('stock_symbol')
     quantity = request.data.get('quantity')
@@ -258,7 +267,6 @@ def sell(request):
         price = to_price,
         left_money = user.user_property + to_price
     )
-    
     stock_data = StockSerializer(stock).data
     user_stock_data = UserStockSerializer(user_stock).data
     record_data = RecordSerializer(record).data
