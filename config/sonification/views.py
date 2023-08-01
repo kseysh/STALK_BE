@@ -218,7 +218,6 @@ def my_stocks(request):
     except User.DoesNotExist:
         return Response({'error': '없는 유저입니다'}, status=404)
 
-
 @swagger_auto_schema(
     method='post',
     operation_id='매도',
