@@ -6,15 +6,17 @@ from django.urls import path,include,re_path
 from rest_framework import permissions
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
+from rest_framework_simplejwt.views import (
+    TokenObtainPairView,
+    TokenRefreshView,
+    TokenVerifyView
+)
 
 schema_view = get_schema_view(
     openapi.Info(
-        title="Snippets API",
+        title="STALK API 명세서",
         default_version='v1',
-        description="Test description",
-        terms_of_service="https://www.google.com/policies/terms/",
-        contact=openapi.Contact(email="contact@snippets.local"),
-        license=openapi.License(name="BSD License"),
+        description="유선마우스 화이팅!",
     ),
     public=True,
     permission_classes=(permissions.AllowAny,),
@@ -30,6 +32,14 @@ urlpatterns = [
     path('restauth/', include('dj_rest_auth.urls')),
     path('regauth/', include('dj_rest_auth.registration.urls')),
     path('allauth/', include('allauth.urls')),
+
+    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'), 
+    #access token과 refresh token을 받을 수 있도록 함
+    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    #access token을 이용하여 두 토큰을 재발급
+    path('api/token/verify/', TokenVerifyView.as_view(), name='token_verify'),
+    #클라이언트가 서버 쪽 signing key가 없이 토큰을 검증할 수 있도록 함
+
 
     path('accounts/', include('accounts.urls')),
     path('sonification/', include("sonification.urls")),

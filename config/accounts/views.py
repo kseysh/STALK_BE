@@ -3,18 +3,26 @@ from django.shortcuts import redirect
 from django.conf import settings
 from django.http import JsonResponse
 from rest_framework import status
+from rest_framework_simplejwt.tokens import RefreshToken
 from dj_rest_auth.registration.views import SocialLoginView
 from allauth.socialaccount.providers.kakao import views as kakao_view
 from allauth.socialaccount.providers.oauth2.client import OAuth2Client
 from allauth.socialaccount.models import SocialAccount
 from .models import User
 
-if settings.DEBUG:
-    BASE_URL = 'http://localhost:8000/'
-else:
-    BASE_URL = 'https://stalksound.store/'
+# if settings.DEBUG:
+#     BASE_URL = 'http://localhost:8000/'
+# else:
+BASE_URL = 'https://stalksound.store/'
 
-KAKAO_CALLBACK_URI = 'https://stalksound.store/accounts/callback/'
+KAKAO_CALLBACK_URI = 'http://stalksound.store/accounts/callback'
+
+def create_token(user):
+    refresh = RefreshToken.for_user(user)
+    return {
+        'refresh': str(refresh),
+        'access': str(refresh.access_token),
+    }
 
 def kakao_login(request):
     rest_api_key = settings.KAKAO_REST_API_KEY
@@ -27,7 +35,8 @@ def kakao_callback(request):
     rest_api_key = settings.KAKAO_REST_API_KEY
     client_secret_key = settings.KAKAO_CLIENT_SECRET_KEY
     code = request.GET.get("code")
-    #code = request.GET["code"]
+
+
     kakao_token_uri = "https://kauth.kakao.com/oauth/token"
     """
     Access Token Request
@@ -45,6 +54,9 @@ def kakao_callback(request):
     token_req = requests.post(kakao_token_uri, data=request_data, headers=token_headers)
     token_req_json = token_req.json()
     error = token_req_json.get("error")
+    # return JsonResponse({
+    #     "token":token_req_json
+    # })
 
     if error is not None:
         raise ValueError(error)
@@ -52,9 +64,7 @@ def kakao_callback(request):
 
     profile_request = requests.get(
         "https://kapi.kakao.com/v2/user/me", 
-        headers={"Authorization": f"Bearer ${access_token}",
-                 "Content-type": "application/x-www-form-urlencoded;charset=utf-8"},
-                 )
+        headers={"Authorization": f"Bearer ${access_token}",})
     if profile_request.status_code == 200:
         profile_json = profile_request.json()
         error = profile_json.get("error")
@@ -62,34 +72,25 @@ def kakao_callback(request):
             raise ValueError(error)
         username = profile_json["id"]
         nickname = profile_json['kakao_account']["profile"]["nickname"]
-        email = profile_json["kakao_account"]["email"]
+        email = profile_json["kakao_account"].get("email")
     else:
         raise ValueError(profile_request.status_code)
     try:
         user = User.objects.get(username=username)
-        social_user = SocialAccount.objects.get(user=user)
-        if social_user is None:
-            return JsonResponse({'err_msg': 'email exists but not social user'}, status=status.HTTP_400_BAD_REQUEST)
+        token = create_token(user=user)
         data = {'access_token': access_token, 'code': code}
         accept = requests.post(
-            f"{BASE_URL}accounts/kakao/login/finish/", data=data)
-        accept_status = accept.status_code
-        if accept_status != 200:
-            return JsonResponse({'err_msg': 'failed to signin'}, status=accept_status)
+            f"{BASE_URL}accounts/kakao/finish/", data=data)
         accept_json = accept.json()
-        accept_json.pop('user', None)
         return JsonResponse(accept_json)
     except User.DoesNotExist:
         data = {'access_token': access_token, 'code': code}
         accept = requests.post(
-            f"{BASE_URL}accounts/kakao/login/finish/", data=data)
-        accept_status = accept.status_code
+            f"{BASE_URL}accounts/kakao/finish/", data=data)
         accept_json = accept.json()
-        accept_json.pop('user', None)
         return JsonResponse(accept_json)
 
 
-class KakaoLogin(SocialLoginView):
-    adapter_class = kakao_view.KakaoOAuth2Adapter
-    client_class = OAuth2Client
-    callback_url = KAKAO_CALLBACK_URI
+# class KakaoLogin(SocialLoginView):
+#     adapter_class = kakao_view.KakaoOAuth2Adapter
+#     client_class = OAuth2Client
