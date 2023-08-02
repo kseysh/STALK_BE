@@ -26,6 +26,16 @@ INVEST_KEY = get_secret('INVEST_KEY')
 INVEST_SECRET_KEY = get_secret('INVEST_SECRET_KEY')
 INVEST_ACC_NO = get_secret('INVEST_ACC_NO')
 
+SOCIALACCOUNT_PROVIDERS = {
+    'kakao': {
+        'APP': {
+            'client_id': KAKAO_REST_API_KEY,
+            'secret': KAKAO_CLIENT_SECRET_KEY,
+            'key': ''
+        }
+    }
+}
+
 AUTH_USER_MODEL = 'accounts.User'
 
 DEBUG = True
@@ -83,6 +93,12 @@ REST_FRAMEWORK = {
         'dj_rest_auth.jwt_auth.JWTCookieAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+}
+
+REST_AUTH = {
+    'USE_JWT': True,
+    'JWT_AUTH_COOKIE': 'stalk-auth-cookie',
+    'JWT_AUTH_REFRESH_COOKIE': 'stalk-refresh-token',
 }
 
 SITE_ID = 1

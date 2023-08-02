@@ -61,6 +61,7 @@ def kakao_callback(request):
     if error is not None:
         raise ValueError(error)
     access_token = token_req_json["access_token"]
+    id_token = token_req_json["id_token"]
 
     profile_request = requests.get(
         "https://kapi.kakao.com/v2/user/me", 
@@ -70,27 +71,30 @@ def kakao_callback(request):
         error = profile_json.get("error")
         if error is not None:
             raise ValueError(error)
-        username = profile_json["id"]
-        nickname = profile_json['kakao_account']["profile"]["nickname"]
-        email = profile_json["kakao_account"].get("email")
+        user_id = profile_json["id"]
+        user_nickname = profile_json['kakao_account']["profile"]["nickname"]
+        user_email = profile_json["kakao_account"].get("email")
     else:
         raise ValueError(profile_request.status_code)
     try:
-        user = User.objects.get(username=username)
+        user = User.objects.get(user_id=user_id)
         token = create_token(user=user)
-        data = {'access_token': access_token, 'code': code}
+        data = {'access_token': access_token, 'code': code, 'id_token':id_token}
+        return JsonResponse(data)
         accept = requests.post(
             f"{BASE_URL}accounts/kakao/finish/", data=data)
         accept_json = accept.json()
         return JsonResponse(accept_json)
     except User.DoesNotExist:
-        data = {'access_token': access_token, 'code': code}
+        data = {'access_token': access_token, 'code': code, 'id_token':id_token}
+        return JsonResponse(data)
         accept = requests.post(
             f"{BASE_URL}accounts/kakao/finish/", data=data)
         accept_json = accept.json()
         return JsonResponse(accept_json)
 
 
-# class KakaoLogin(SocialLoginView):
-#     adapter_class = kakao_view.KakaoOAuth2Adapter
-#     client_class = OAuth2Client
+class KakaoLogin(SocialLoginView):
+    adapter_class = kakao_view.KakaoOAuth2Adapter
+    client_class = OAuth2Client
+    callback_url = KAKAO_CALLBACK_URI

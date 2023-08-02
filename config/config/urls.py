@@ -39,6 +39,8 @@ urlpatterns = [
     #access token을 이용하여 두 토큰을 재발급
     path('api/token/verify/', TokenVerifyView.as_view(), name='token_verify'),
     #클라이언트가 서버 쪽 signing key가 없이 토큰을 검증할 수 있도록 함
+    path('dj_rest-auth',include('dj_rest_auth.urls')),
+    path('dj_rest-auth/registration/',include('dj_rest_auth.registration.urls')),
 
 
     path('accounts/', include('accounts.urls')),
