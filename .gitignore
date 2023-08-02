@@ -7,3 +7,5 @@ __init__.py
 db.sqlite3
 static
 token.dat
+static
+koreainvestment.key
