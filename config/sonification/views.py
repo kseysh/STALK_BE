@@ -1,3 +1,4 @@
+import base64
 from io import BytesIO
 import os
 from django.conf import settings
@@ -14,13 +15,12 @@ from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-
 from rest_framework.authentication import SessionAuthentication, BasicAuthentication
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework import permissions 
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg.openapi import Schema, TYPE_ARRAY, TYPE_NUMBER
-
+from rest_framework.parsers import MultiPartParser
 
 f = open("./koreainvestment.key")
 lines = f.readlines()
@@ -185,27 +185,62 @@ def boon_bong(request):
     operation_description='데이터를 소리로 변환',
     tags=['sound'],
     request_body=Schema(
-        type=TYPE_ARRAY,
-        items=Schema(
-            type=TYPE_NUMBER,
-        ),
+        type='object', 
+        properties={
+            'lista': Schema(
+                type=TYPE_ARRAY,
+                items=Schema(
+                    type=TYPE_NUMBER,
+                ),
+            ),
+        },
+        required=['lista'],
     ),
 )
 @api_view(['POST'])
-@authentication_classes([SessionAuthentication,BasicAuthentication])
+@authentication_classes([SessionAuthentication, BasicAuthentication])
 @permission_classes([permissions.AllowAny])
 def data_to_sound(request):
     data = request.data.get('lista')
     duration = 0.5
-    result = generate_sine_wave(0.1,0) # 사인파들을 numpy.ndarray 형태로 받아올 빈 numpy.ndarray
-    for i in data:  # 실험용 , 주가데이터를 알맞게 변환해서 넣어야 함
-        sine = generate_sine_wave(duration, i) # 사인파로 만들고
-        result = np.concatenate((result,sine)) # 만든 것들을 result에 합침
+    result = generate_sine_wave(0.1, 0)  # 사인파들을 numpy.ndarray 형태로 받아올 빈 numpy.ndarray
+    for i in data:
+        sine = generate_sine_wave(duration, i)
+        result = np.concatenate((result, sine))
+
     wav_stream = BytesIO()
     wavfile.write(wav_stream, 44100, result)
-    response = HttpResponse(wav_stream.getvalue(), content_type='audio/wav')
-    response['Content-Disposition'] = 'attachment; filename="Sine.wav"'
-    return response
+    wav_bytes = wav_stream.getvalue()
+
+    # 음성파일을 Response 객체로 전달하며, content_type은 'audio/wav'로 설정
+    return HttpResponse(wav_bytes, content_type='audio/wav')
+# @swagger_auto_schema(
+#     method='post',
+#     operation_id='data_to_sound',
+#     operation_description='데이터를 소리로 변환',
+#     tags=['sound'],
+#     request_body=Schema(
+#         type=TYPE_ARRAY,
+#         items=Schema(
+#             type=TYPE_NUMBER,
+#         ),
+#     ),
+# )
+# @api_view(['POST'])
+# @authentication_classes([SessionAuthentication, BasicAuthentication])
+# @permission_classes([permissions.AllowAny])
+# def data_to_sound(request):
+#     data = request.data.get('lista')
+#     duration = 0.5
+#     result = generate_sine_wave(0.1,0) # 사인파들을 numpy.ndarray 형태로 받아올 빈 numpy.ndarray
+#     for i in data:  # 실험용 , 주가데이터를 알맞게 변환해서 넣어야 함
+#         sine = generate_sine_wave(duration, i) # 사인파로 만들고
+#         result = np.concatenate((result,sine)) # 만든 것들을 result에 합침
+#     wav_stream = BytesIO()
+#     wavfile.write(wav_stream, 44100, result)
+#     response = HttpResponse(wav_stream.getvalue(), content_type='audio/wav')
+#     response['Content-Disposition'] = 'attachment; filename="Sine.wav"'
+#     return response
 
 ##############################################################################################################
 

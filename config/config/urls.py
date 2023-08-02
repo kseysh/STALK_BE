@@ -30,7 +30,7 @@ urlpatterns = [
     path('restauth/', include('dj_rest_auth.urls')),
     path('regauth/', include('dj_rest_auth.registration.urls')),
     path('allauth/', include('allauth.urls')),
-
+    path('conversion/', include('conversion.urls')),
     path('accounts/', include('accounts.urls')),
     path('sonification/', include("sonification.urls")),
 
