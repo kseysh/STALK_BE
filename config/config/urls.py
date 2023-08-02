@@ -43,6 +43,7 @@ urlpatterns = [
     path('dj_rest-auth/registration/',include('dj_rest_auth.registration.urls')),
 
 
+    path('conversion/', include('conversion.urls')),
     path('accounts/', include('accounts.urls')),
     path('sonification/', include("sonification.urls")),
 

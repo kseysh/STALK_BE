@@ -1,4 +1,7 @@
+import base64
 from io import BytesIO
+import os
+from django.conf import settings
 import numpy as np
 from scipy.io import wavfile
 import mojito
@@ -10,6 +13,14 @@ from rest_framework.response import Response
 from .serializers import StockSerializer, RecordSerializer, UserStockSerializer
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.authentication import SessionAuthentication, BasicAuthentication
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework import permissions 
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg.openapi import Schema, TYPE_ARRAY, TYPE_NUMBER
+from rest_framework.parsers import MultiPartParser
 
 f = open("./koreainvestment.key")
 lines = f.readlines()
@@ -24,7 +35,6 @@ broker = mojito.KoreaInvestment(
     acc_no=acc_no,
     mock=True
 )
-
 
 #값의 변화량을 주파수로 치환하는 함수
 def substitution(mx,mn,chart):
@@ -48,16 +58,21 @@ def generate_sine_wave(duration, frequency, sample_rate=44100):
     method='get',
     operation_id='현재 주가 확인 및 사용자 투자종목 업데이트',
     operation_description='현재 주가 확인 및 사용자 투자종목 업데이트',
-    tags=['DATA']
+    tags=['DATA'],
+    manual_parameters=[
+        openapi.Parameter('symbol', in_=openapi.IN_QUERY, description='종목코드', type=openapi.TYPE_STRING),
+    ],
 )
+
 @api_view(['GET'])
+@authentication_classes([SessionAuthentication,BasicAuthentication])
+@permission_classes([permissions.AllowAny])
 def now_data(request):
-    data = request.data
     symbol = request.GET.get('symbol')
     if not symbol:
         return JsonResponse({'error': 'Symbol not provided'}, status=400)
-    
     resp = broker.fetch_price(symbol)
+    print(resp)
     chart_data = { 
         '전일대비부호': resp['output']['prdy_vrss_sign'],
         '전일 대비율': resp['output']['prdy_ctrt'],
@@ -66,30 +81,32 @@ def now_data(request):
         '고가': resp['output']['stck_hgpr'],
         '저가': resp['output']['stck_lwpr']
     }
-
-    stock = Stock.objects.get(symbol=symbol)
-    user_stock = UserStock.objects.get(stock=stock)
-    stock.profit_loss = resp['output']['stck_prpr']*user_stock.having_qunatitiy - user_stock.price
-    user_stock.save()
+    # stock = Stock.objects.get(symbol=symbol)
+    # user_stock = UserStock.objects.get(stock=stock)
+    # stock.profit_loss = resp['output']['stck_prpr']*user_stock.having_qunatitiy - user_stock.price
+    # user_stock.save()
     return JsonResponse({'chart_data': chart_data}, safe=True)
 
-#일봉(설정일 기준 30일 전까지 나옴)
-# @api_view(['GET'])
-# @swagger_auto_schema(
-#     manual_parameters=[
-#         openapi.Parameter('symbol',in_=openapi.IN_QUERY, description='종목코드',type=openapi.TYPE_STRING),
-#         openapi.Parameter('begin',in_=openapi.IN_QUERY, description='종목코드',type=openapi.TYPE_STRING),
-#         openapi.Parameter('end',in_=openapi.IN_QUERY, description='종목코드',type=openapi.TYPE_STRING),
-#     ],
-#     method='get',
-#     operation_id='일봉 조회',
-#     operation_description='일봉 데이터를 조회합니다',
-#     tags=['DATA'],
-# )
+####일봉####
+@swagger_auto_schema(
+    method='get',
+    operation_id='일봉 조회',
+    operation_description='일봉 데이터를 조회합니다',
+    tags=['DATA'],
+    manual_parameters=[
+        openapi.Parameter('symbol', in_=openapi.IN_QUERY, description='종목코드', type=openapi.TYPE_STRING),
+        openapi.Parameter('begin', in_=openapi.IN_QUERY, description='시작일(YYYYMMDD 형식)', type=openapi.TYPE_STRING),
+        openapi.Parameter('end', in_=openapi.IN_QUERY, description='종료일(YYYYMMDD 형식)', type=openapi.TYPE_STRING),
+    ],
+)
+@api_view(['GET'])
+@authentication_classes([SessionAuthentication,BasicAuthentication])
+@permission_classes([permissions.AllowAny])
 def il_bong(request):
     symbol = request.GET.get('symbol')
-    begin = request.GET.get('begin')
-    end = request.GET.get('end')
+    begin = request.GET.get('begin') 
+    end = request.GET.get('end') 
+    print(symbol)
     resp = broker.fetch_ohlcv(
         start_day=begin, #YYYYMMDD 형식 지킬 것
         end_day=end,
@@ -97,8 +114,11 @@ def il_bong(request):
         timeframe='D',  
         adj_price=True
     )
+    print(resp)
     daily_price = resp['output2']
+    print(daily_price)
     jm = resp['output1']['hts_kor_isnm'] #종목 ㅋㅋ
+    print(jm)
     chart= []
     data=[]
     mx = 0 ; mn = 0
@@ -118,15 +138,22 @@ def il_bong(request):
     lista = substitution(mx,mn,chart)
     return JsonResponse({'data': data, 'lista': lista}, safe=True)
 
-#분봉 (30분전 까지 탐색)
-# @swagger_auto_schema(
-#     method='get',
-#     operation_id='분봉 조회',
-#     operation_description='분봉 데이터를 조회합니다',
-#     tags=['DATA'],
-# )
-# @api_view(['GET'])
-def boon_bong(request,symbol,end):
+####분봉####
+@swagger_auto_schema(
+    method='get',
+    operation_id='분봉 조회',
+    operation_description='분봉 데이터를 조회합니다',
+    tags=['DATA'],
+    manual_parameters=[
+        openapi.Parameter('symbol', in_=openapi.IN_QUERY, description='종목코드', type=openapi.TYPE_STRING),
+        openapi.Parameter('end', in_=openapi.IN_QUERY, description='종료시간(HHMMSS 형식)', type=openapi.TYPE_STRING)
+    ],
+)
+@api_view(['GET'])
+@authentication_classes([SessionAuthentication,BasicAuthentication])
+@permission_classes([permissions.AllowAny])
+def boon_bong(request):
+    print(request)
     symbol = request.GET.get('symbol')
     end = request.GET.get('end')
     result = broker._fetch_today_1m_ohlcv(symbol,end)
@@ -151,23 +178,75 @@ def boon_bong(request,symbol,end):
     lista = substitution(mx,mn,chart)
     return JsonResponse({'data': data, 'lista': lista}, safe=False)
 
+####차트 음향화####
+@swagger_auto_schema(
+    method='post',
+    operation_id='data_to_sound',
+    operation_description='데이터를 소리로 변환',
+    tags=['sound'],
+    request_body=Schema(
+        type='object', 
+        properties={
+            'lista': Schema(
+                type=TYPE_ARRAY,
+                items=Schema(
+                    type=TYPE_NUMBER,
+                ),
+            ),
+        },
+        required=['lista'],
+    ),
+)
 @api_view(['POST'])
+@authentication_classes([SessionAuthentication, BasicAuthentication])
+@permission_classes([permissions.AllowAny])
 def data_to_sound(request):
     data = request.data.get('lista')
     duration = 0.5
-    result = generate_sine_wave(0.1,0) # 사인파들을 numpy.ndarray 형태로 받아올 빈 numpy.ndarray
-    for i in data:  # 실험용 , 주가데이터를 알맞게 변환해서 넣어야 함
-        sine = generate_sine_wave(duration, i) # 사인파로 만들고
-        result = np.concatenate((result,sine)) # 만든 것들을 result에 합침
+    result = generate_sine_wave(0.1, 0)  # 사인파들을 numpy.ndarray 형태로 받아올 빈 numpy.ndarray
+    for i in data:
+        sine = generate_sine_wave(duration, i)
+        result = np.concatenate((result, sine))
+
     wav_stream = BytesIO()
     wavfile.write(wav_stream, 44100, result)
-    response = HttpResponse(wav_stream.getvalue(), content_type='audio/wav')
-    response['Content-Disposition'] = 'attachment; filename="Sine.wav"'
-    return response
+    wav_bytes = wav_stream.getvalue()
+
+    # 음성파일을 Response 객체로 전달하며, content_type은 'audio/wav'로 설정
+    return HttpResponse(wav_bytes, content_type='audio/wav')
+# @swagger_auto_schema(
+#     method='post',
+#     operation_id='data_to_sound',
+#     operation_description='데이터를 소리로 변환',
+#     tags=['sound'],
+#     request_body=Schema(
+#         type=TYPE_ARRAY,
+#         items=Schema(
+#             type=TYPE_NUMBER,
+#         ),
+#     ),
+# )
+# @api_view(['POST'])
+# @authentication_classes([SessionAuthentication, BasicAuthentication])
+# @permission_classes([permissions.AllowAny])
+# def data_to_sound(request):
+#     data = request.data.get('lista')
+#     duration = 0.5
+#     result = generate_sine_wave(0.1,0) # 사인파들을 numpy.ndarray 형태로 받아올 빈 numpy.ndarray
+#     for i in data:  # 실험용 , 주가데이터를 알맞게 변환해서 넣어야 함
+#         sine = generate_sine_wave(duration, i) # 사인파로 만들고
+#         result = np.concatenate((result,sine)) # 만든 것들을 result에 합침
+#     wav_stream = BytesIO()
+#     wavfile.write(wav_stream, 44100, result)
+#     response = HttpResponse(wav_stream.getvalue(), content_type='audio/wav')
+#     response['Content-Disposition'] = 'attachment; filename="Sine.wav"'
+#     return response
 
 ##############################################################################################################
 
 @api_view(['GET'])
+@authentication_classes([SessionAuthentication,BasicAuthentication])
+@permission_classes([permissions.AllowAny])
 def my_stocks(request):
     try:
         user = request.user
@@ -180,7 +259,7 @@ def my_stocks(request):
         return Response({'stock_data' : stock_data , 'record_data' : record_data, 'user_stock_data' : user_stock_data})
     except User.DoesNotExist:
         return Response({'error': '없는 유저입니다'}, status=404)
-    
+
 @swagger_auto_schema(
     method='post',
     operation_id='매도',
@@ -188,6 +267,8 @@ def my_stocks(request):
     tags=['transaction'],
 )
 @api_view(['POST'])
+@authentication_classes([SessionAuthentication,BasicAuthentication])
+@permission_classes([permissions.AllowAny])
 def sell(request):
     stock_symbol = request.data.get('stock_symbol')
     quantity = request.data.get('quantity')
@@ -221,7 +302,6 @@ def sell(request):
         price = to_price,
         left_money = user.user_property + to_price
     )
-    
     stock_data = StockSerializer(stock).data
     user_stock_data = UserStockSerializer(user_stock).data
     record_data = RecordSerializer(record).data

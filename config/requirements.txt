@@ -11,6 +11,7 @@ django-cors-headers==4.1.0
 django-rest-auth==0.9.5
 djangorestframework==3.14.0
 djangorestframework-simplejwt==5.2.2
+django-cors-headers==4.1.0
 drf-yasg==1.21.7
 gunicorn==21.2.0
 idna==3.4
