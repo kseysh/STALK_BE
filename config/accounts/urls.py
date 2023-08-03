@@ -3,7 +3,7 @@ from accounts import views
 
 urlpatterns = [
     path('kakao/login/', views.kakao_login),
-    path('callback/', views.kakao_callback),
+    path('kakao/callback/', views.kakao_callback),
     path('kakao/logout/', views.kakao_logout),
     path('userinfo/',views.check_jwt_user),
 

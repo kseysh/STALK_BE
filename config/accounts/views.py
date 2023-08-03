@@ -15,8 +15,8 @@ from .serializers import UserSerializer
 
 BASE_URL = 'https://stalksound.store/'
 # BASE_URL = 'http://127.0.0.1:8000/'
-KAKAO_CALLBACK_URI = 'https://stalksound.store/accounts/callback'
-# KAKAO_CALLBACK_URI = 'http://127.0.0.1:8000/accounts/callback'
+KAKAO_CALLBACK_URI = 'https://stalksound.store/accounts/kakao/callback'
+# KAKAO_CALLBACK_URI = 'http://127.0.0.1:8000/accounts/kakao/callback'
 
 @api_view(['GET'])
 def kakao_login(request): # 백엔드 테스트용 login 코드 이 코드는 프론트에서 처리하도록 하기
