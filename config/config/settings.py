@@ -39,11 +39,16 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.sites',
-    'corsheaders',
     # my app
     'accounts',
     'sonification',
     'conversion',
+    'news',
+
+    # third party app
+    'corsheaders',
+    'drf_yasg',
+
     # django rest framework
     'rest_framework',
     'rest_framework.authtoken',
@@ -51,13 +56,6 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt.token_blacklist',
     'dj_rest_auth',
     'dj_rest_auth.registration',
-    # django-allauth
-    'allauth',
-    'allauth.account',
-    'allauth.socialaccount',
-    'allauth.socialaccount.providers.kakao',
-    # swagger
-    'drf_yasg',
 ]
 
 REST_FRAMEWORK = {
