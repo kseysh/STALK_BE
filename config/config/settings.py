@@ -34,7 +34,7 @@ SOCIALACCOUNT_PROVIDERS = {
 }
 
 AUTH_USER_MODEL = 'accounts.User'
-DEBUG = False
+DEBUG = True
 
 # if not DEBUG:
 #     LOGIN_REDIRECT_URL = 'http://localhost:8000/' 
@@ -62,8 +62,8 @@ INSTALLED_APPS = [
     'corsheaders',
     # my app
     'accounts',
-    'sonification',
-    'conversion',
+    #'sonification',
+    #'conversion',
     # django rest framework
     'rest_framework',
     'rest_framework.authtoken',
@@ -207,9 +207,9 @@ AUTHENTICATION_BACKENDS = [
 
 #ACCOUNT_USER_MODEL_USERNAME_FIELD = None # username 필드 사용 x
 ACCOUNT_EMAIL_VERIFICATION = "none" # 이메일 확인을 끔
-ACCOUNT_EMAIL_REQUIRED = True # email 필드 사용 o
-ACCOUNT_USERNAME_REQUIRED = True # username 필드 사용 x
-ACCOUNT_AUTHENTICATION_METHOD = 'username'
+ACCOUNT_EMAIL_REQUIRED = False # email 필드 사용 o
+ACCOUNT_USERNAME_REQUIRED = False # username 필드 사용 x
+ACCOUNT_AUTHENTICATION_METHOD = 'user_id'
 
 REST_USE_JWT = True
 

@@ -1,4 +1,4 @@
-import requests
+import requests,json
 from django.shortcuts import redirect
 from django.conf import settings
 from django.http import JsonResponse
@@ -13,16 +13,10 @@ from .models import User
 # if settings.DEBUG:
 #     BASE_URL = 'http://localhost:8000/'
 # else:
-BASE_URL = 'https://stalksound.store/'
-
-KAKAO_CALLBACK_URI = 'http://stalksound.store/accounts/callback'
-
-def create_token(user):
-    refresh = RefreshToken.for_user(user)
-    return {
-        'refresh': str(refresh),
-        'access': str(refresh.access_token),
-    }
+# BASE_URL = 'https://stalksound.store/'
+BASE_URL = 'http://127.0.0.1:8000/'
+# KAKAO_CALLBACK_URI = 'https://stalksound.store/accounts/callback'
+KAKAO_CALLBACK_URI = 'http://127.0.0.1:8000/accounts/callback'
 
 def kakao_login(request):
     rest_api_key = settings.KAKAO_REST_API_KEY
@@ -45,7 +39,6 @@ def kakao_callback(request):
             'grant_type': 'authorization_code',
             'client_id': rest_api_key,
             'redirect_uri': KAKAO_CALLBACK_URI,
-            'client_secret': client_secret_key,
             'code': code,
         }
     token_headers = {
@@ -62,6 +55,7 @@ def kakao_callback(request):
         raise ValueError(error)
     access_token = token_req_json["access_token"]
     id_token = token_req_json["id_token"]
+    print
 
     profile_request = requests.get(
         "https://kapi.kakao.com/v2/user/me", 
@@ -78,18 +72,21 @@ def kakao_callback(request):
         raise ValueError(profile_request.status_code)
     try:
         user = User.objects.get(user_id=user_id)
-        token = create_token(user=user)
+        # data = {'access_token': access_token, 'code': code}
         data = {'access_token': access_token, 'code': code, 'id_token':id_token}
-        return JsonResponse(data)
+        json_data = json.dumps(data)
+        headers = {'Content-type': 'application/json'}
         accept = requests.post(
-            f"{BASE_URL}accounts/kakao/finish/", data=data)
+            f"{BASE_URL}accounts/kakao/finish/", data=json_data, headers=headers)
         accept_json = accept.json()
         return JsonResponse(accept_json)
     except User.DoesNotExist:
+        # data = {'access_token': access_token, 'code': code}
         data = {'access_token': access_token, 'code': code, 'id_token':id_token}
-        return JsonResponse(data)
+        json_data = json.dumps(data)
+        headers = {'Content-type': 'application/json'}
         accept = requests.post(
-            f"{BASE_URL}accounts/kakao/finish/", data=data)
+            f"{BASE_URL}accounts/kakao/finish/", data=json_data,headers=headers)
         accept_json = accept.json()
         return JsonResponse(accept_json)
 
