@@ -1,6 +1,7 @@
 asgiref==3.7.2
 beautifulsoup4==4.12.2
 bs4==0.0.1
+audioread==3.0.0
 certifi==2023.7.22
 cffi==1.15.1
 charset-normalizer==3.2.0
@@ -35,6 +36,7 @@ scipy==1.11.1
 six==1.16.0
 sounddevice==0.4.6
 soupsieve==2.4.1
+soundfile==0.12.1
 SpeechRecognition==3.10.0
 sqlparse==0.4.4
 typing_extensions==4.7.1
