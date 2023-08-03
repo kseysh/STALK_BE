@@ -1,6 +1,6 @@
 from datetime import timedelta
 from pathlib import Path
-import json, os, sys
+import json, os
 from django.core.exceptions import ImproperlyConfigured
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
@@ -21,29 +21,9 @@ def get_secret(setting,secrets_dict = secrets):
 
 SECRET_KEY = get_secret('SECRET_KEY')
 KAKAO_REST_API_KEY = get_secret('KAKAO_REST_API_KEY')
-KAKAO_CLIENT_SECRET_KEY = get_secret('KAKAO_CLIENT_SECRET_KEY')
-
-SOCIALACCOUNT_PROVIDERS = {
-    'kakao': {
-        'APP': {
-            'client_id': KAKAO_REST_API_KEY,
-            'secret': KAKAO_CLIENT_SECRET_KEY,
-            'key': ''
-        }
-    }
-}
 
 AUTH_USER_MODEL = 'accounts.User'
-DEBUG = False
-
-# if not DEBUG:
-#     LOGIN_REDIRECT_URL = 'http://localhost:8000/' 
-# else:
-#     LOGIN_REDIRECT_URL = 'https://stalksound.store/' 
-# if not DEBUG:
-#     ACCOUNT_LOGOUT_REDIRECT_URL = 'http://127.0.0.1:8000/'
-# else:
-#     ACCOUNT_LOGOUT_REDIRECT_URL = 'https://stalksound.store/'
+DEBUG = True
 
 SOCIALACCOUNT_LOGIN_ON_GET = True # 중간 창 없이 카카오 로그인 페이지로 넘어가게 하는 설정
 
@@ -59,11 +39,16 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.sites',
-    'corsheaders',
     # my app
     'accounts',
     'sonification',
     'conversion',
+    'news',
+
+    # third party app
+    'corsheaders',
+    'drf_yasg',
+
     # django rest framework
     'rest_framework',
     'rest_framework.authtoken',
@@ -71,17 +56,11 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt.token_blacklist',
     'dj_rest_auth',
     'dj_rest_auth.registration',
-    # django-allauth
-    'allauth',
-    'allauth.account',
-    'allauth.socialaccount',
-    'allauth.socialaccount.providers.kakao',
-    # swagger
-    'drf_yasg',
 ]
 
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
+        # 'rest_framework.permissions.IsAuthenticated', # 인증된 사용자만 접근
         'rest_framework.permissions.AllowAny',
     ),
     'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -94,8 +73,6 @@ REST_FRAMEWORK = {
 
 REST_AUTH = {
     'USE_JWT': True,
-    'JWT_AUTH_COOKIE': 'stalk-auth-cookie',
-    'JWT_AUTH_REFRESH_COOKIE': 'stalk-refresh-token',
 }
 
 SITE_ID = 1
@@ -119,7 +96,7 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.SessionAuthentication',
-        'rest_framework.authentication.TokenAuthentication', # 원하는 경우 TokenAuthentication 추가
+        'rest_framework.authentication.TokenAuthentication',
     ],
 }
 
@@ -149,22 +126,6 @@ DATABASES = {
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
-
-
-AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
-]
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
@@ -205,11 +166,10 @@ AUTHENTICATION_BACKENDS = [
     'allauth.account.auth_backends.AuthenticationBackend',
 ]
 
-#ACCOUNT_USER_MODEL_USERNAME_FIELD = None # username 필드 사용 x
 ACCOUNT_EMAIL_VERIFICATION = "none" # 이메일 확인을 끔
-ACCOUNT_EMAIL_REQUIRED = True # email 필드 사용 o
-ACCOUNT_USERNAME_REQUIRED = True # username 필드 사용 x
-ACCOUNT_AUTHENTICATION_METHOD = 'username'
+ACCOUNT_EMAIL_REQUIRED = False # email 필드 사용 o
+ACCOUNT_USERNAME_REQUIRED = True # username 필드 사용 o
+ACCOUNT_AUTHENTICATION_METHOD = 'username' 
 
 REST_USE_JWT = True
 
@@ -229,8 +189,8 @@ SIMPLE_JWT = {
 
     'AUTH_HEADER_TYPES': ('Bearer',),
     'AUTH_HEADER_NAME': 'HTTP_AUTHORIZATION',
-    'USER_ID_FIELD': 'user_id',
-    'USER_ID_CLAIM': 'user_id',
+    'USER_ID_FIELD': 'username',
+    'USER_ID_CLAIM': 'username',
     'USER_AUTHENTICATION_RULE': 'rest_framework_simplejwt.authentication.default_user_authentication_rule',
 
     'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
