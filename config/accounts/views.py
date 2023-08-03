@@ -7,7 +7,8 @@ from django.shortcuts import get_object_or_404
 from rest_framework import status,permissions 
 from rest_framework.response import Response
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenRefreshSerializer
-from rest_framework.decorators import api_view,permission_classes
+from rest_framework.authentication import SessionAuthentication, BasicAuthentication
+from rest_framework.decorators import api_view,permission_classes,authentication_classes
 
 from .models import User
 from .serializers import UserSerializer
@@ -19,6 +20,8 @@ KAKAO_CALLBACK_URI = 'https://stalksound.store/accounts/kakao/callback'
 # KAKAO_CALLBACK_URI = 'http://127.0.0.1:8000/accounts/kakao/callback'
 
 @api_view(['GET'])
+@authentication_classes([SessionAuthentication,BasicAuthentication])
+@permission_classes([permissions.AllowAny])
 def kakao_login(request): # 백엔드 테스트용 login 코드 이 코드는 프론트에서 처리하도록 하기
     rest_api_key = settings.KAKAO_REST_API_KEY
     return redirect(
@@ -26,6 +29,8 @@ def kakao_login(request): # 백엔드 테스트용 login 코드 이 코드는 �
     )
 
 @api_view(['GET'])
+@authentication_classes([SessionAuthentication,BasicAuthentication])
+@permission_classes([permissions.AllowAny])
 def kakao_callback(request):
     rest_api_key = settings.KAKAO_REST_API_KEY
     code = request.GET.get("code")
@@ -106,6 +111,7 @@ def kakao_callback(request):
         return res
     
 @api_view(['GET'])
+@authentication_classes([SessionAuthentication,BasicAuthentication])
 @permission_classes([permissions.IsAuthenticated])
 def kakao_logout(self):
     response = Response({
@@ -116,6 +122,8 @@ def kakao_logout(self):
     return response
 
 @api_view(['GET'])
+@authentication_classes([SessionAuthentication,BasicAuthentication])
+@permission_classes([permissions.IsAuthenticated])
 def check_jwt_user(request):
     try:
         access = request.COOKIES['access']
