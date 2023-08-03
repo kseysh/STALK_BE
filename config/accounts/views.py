@@ -1,13 +1,17 @@
-import requests,json
+import requests, jwt
+
 from django.shortcuts import redirect
 from django.conf import settings
-from django.http import JsonResponse
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from rest_framework import status
+from django.shortcuts import get_object_or_404
+
+from rest_framework import status,permissions 
 from rest_framework.response import Response
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenRefreshSerializer
+from rest_framework.decorators import api_view,permission_classes
+
 from .models import User
 from .serializers import UserSerializer
-from rest_framework.decorators import api_view
+
 
 BASE_URL = 'https://stalksound.store/'
 # BASE_URL = 'http://127.0.0.1:8000/'
@@ -102,6 +106,7 @@ def kakao_callback(request):
         return res
     
 @api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
 def kakao_logout(self):
     response = Response({
         "message": "Logout success"
@@ -109,4 +114,30 @@ def kakao_logout(self):
     response.delete_cookie("access")
     response.delete_cookie("refresh")
     return response
+
+@api_view(['GET'])
+def check_jwt_user(request):
+    try:
+        access = request.COOKIES['access']
+        payload = jwt.decode(access, settings.SECRET_KEY, algorithms=['HS256'])
+        username = payload.get('username')
+        user = get_object_or_404(User, username=username)
+        serializer = UserSerializer(instance=user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    except(jwt.exceptions.ExpiredSignatureError):
+        data = {'refresh': request.COOKIES.get('refresh', None)}
+        serializer = TokenRefreshSerializer(data=data)
+        if serializer.is_valid(raise_exception=True):
+            access = serializer.data.get('access', None)
+            refresh = serializer.data.get('refresh', None)
+            payload = jwt.decode(access, settings.SECRET_KEY, algorithms=['HS256'])
+            username = payload.get('username')
+            user = get_object_or_404(User, username=username)
+            serializer = UserSerializer(instance=user)
+            res = Response(serializer.data, status=status.HTTP_200_OK)
+            res.set_cookie('access', access)
+            res.set_cookie('refresh', refresh)
+            return res
+        raise jwt.exceptions.InvalidTokenError
 

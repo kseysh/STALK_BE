@@ -1,6 +1,6 @@
 from datetime import timedelta
 from pathlib import Path
-import json, os, sys
+import json, os
 from django.core.exceptions import ImproperlyConfigured
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
@@ -75,8 +75,6 @@ REST_FRAMEWORK = {
 
 REST_AUTH = {
     'USE_JWT': True,
-    # 'JWT_AUTH_COOKIE': 'stalk-auth-cookie',
-    # 'JWT_AUTH_REFRESH_COOKIE': 'stalk-refresh-token',
 }
 
 SITE_ID = 1
@@ -130,22 +128,6 @@ DATABASES = {
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
-
-
-# AUTH_PASSWORD_VALIDATORS = [
-#     {
-#         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-#     },
-#     {
-#         'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-#     },
-#     {
-#         'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-#     },
-#     {
-#         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-#     },
-# ]
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
