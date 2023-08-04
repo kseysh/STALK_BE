@@ -22,6 +22,7 @@ def get_secret(setting,secrets_dict = secrets):
 SECRET_KEY = get_secret('SECRET_KEY')
 KAKAO_REST_API_KEY = get_secret('KAKAO_REST_API_KEY')
 
+
 AUTH_USER_MODEL = 'accounts.User'
 DEBUG = True
 
@@ -163,7 +164,6 @@ SWAGGER_SETTINGS = {
 
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
-    'allauth.account.auth_backends.AuthenticationBackend',
 ]
 
 ACCOUNT_EMAIL_VERIFICATION = "none" # 이메일 확인을 끔

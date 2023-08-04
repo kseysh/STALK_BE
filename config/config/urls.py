@@ -27,6 +27,7 @@ urlpatterns = [
     path('conversion/', include('conversion.urls')),
     path('accounts/', include('accounts.urls')),
     path('sonification/', include("sonification.urls")),
+    path('news/',include('news.urls')),
 
     re_path(r'^static/(?P<path>.*)$', serve, {'document_root': settings.STATIC_ROOT}),
 ]
