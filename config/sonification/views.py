@@ -57,8 +57,8 @@ def generate_sine_wave(duration, frequency, sample_rate=44100):
 @swagger_auto_schema(
     method='get',
     operation_id='현재 주가 확인 및 사용자 투자종목 업데이트',
-    operation_description='현재 주가 확인 및 사용자 투자종목 업데이트',
-    tags=['DATA'],
+    operation_description='api호출한 순간의 해당종목 데이터',
+    tags=['주식 데이터'],
     manual_parameters=[
         openapi.Parameter('symbol', in_=openapi.IN_QUERY, description='종목코드', type=openapi.TYPE_STRING),
     ],
@@ -90,9 +90,9 @@ def now_data(request):
 ####일봉####
 @swagger_auto_schema(
     method='get',
-    operation_id='일봉 조회',
-    operation_description='일봉 데이터를 조회합니다',
-    tags=['DATA'],
+    operation_id='날짜 별 데이터 조회',
+    operation_description='최대 100일 조회가능/ 시작일~종료일',
+    tags=['주식 데이터'],
     manual_parameters=[
         openapi.Parameter('symbol', in_=openapi.IN_QUERY, description='종목코드', type=openapi.TYPE_STRING),
         openapi.Parameter('begin', in_=openapi.IN_QUERY, description='시작일(YYYYMMDD 형식)', type=openapi.TYPE_STRING),
@@ -102,7 +102,7 @@ def now_data(request):
 @api_view(['GET'])
 @authentication_classes([SessionAuthentication,BasicAuthentication])
 @permission_classes([permissions.AllowAny])
-def il_bong(request):
+def day_data(request):
     symbol = request.GET.get('symbol')
     begin = request.GET.get('begin') 
     end = request.GET.get('end') 
@@ -138,12 +138,64 @@ def il_bong(request):
     lista = substitution(mx,mn,chart)
     return JsonResponse({'data': data, 'lista': lista}, safe=True)
 
+####주봉####
+
+@swagger_auto_schema(
+    method='get',
+    operation_id='주 별 데이터 조회',
+    operation_description='일 별 데이터와 동일하게 최대 100개의 데이터 조회 가능',
+    tags=['주식 데이터'],
+    manual_parameters=[
+        openapi.Parameter('symbol', in_=openapi.IN_QUERY, description='종목코드', type=openapi.TYPE_STRING),
+        openapi.Parameter('begin', in_=openapi.IN_QUERY, description='시작일(YYYYMMDD 형식)', type=openapi.TYPE_STRING),
+        openapi.Parameter('end', in_=openapi.IN_QUERY, description='종료일(YYYYMMDD 형식)', type=openapi.TYPE_STRING),
+    ],
+)
+@api_view(['GET'])
+@authentication_classes([SessionAuthentication,BasicAuthentication])
+@permission_classes([permissions.AllowAny])
+def week_data(request):
+    symbol = request.GET.get('symbol')
+    begin = request.GET.get('begin') 
+    end = request.GET.get('end') 
+    print(symbol)
+    resp = broker.fetch_ohlcv(
+        start_day=begin, #YYYYMMDD 형식 지킬 것
+        end_day=end,
+        symbol=symbol, #종목
+        timeframe='W',  
+        adj_price=True
+    )
+    print(resp)
+    daily_price = resp['output2']
+    print(daily_price)
+    jm = resp['output1']['hts_kor_isnm'] #종목 ㅋㅋ
+    print(jm)
+    chart= []
+    data=[]
+    mx = 0 ; mn = 0
+    for dp in reversed(daily_price):
+        chart_data = {
+            "종목": jm,
+            '날짜': dp['stck_bsop_date'],
+            '시가': dp['stck_oprc'],
+            '현재가': dp['stck_clpr'],
+            '고가': dp['stck_hgpr'],
+            '저가': dp['stck_lwpr']
+        }
+        chart.append(int(dp['stck_clpr']))
+        data.append(chart_data)
+        mx = max(mx,int(dp['stck_hgpr']))
+        mn = min(mn,int(dp['stck_lwpr']))
+    lista = substitution(mx,mn,chart)
+    return JsonResponse({'data': data, 'lista': lista}, safe=True)
+
 ####분봉####
 @swagger_auto_schema(
     method='get',
-    operation_id='분봉 조회',
-    operation_description='분봉 데이터를 조회합니다',
-    tags=['DATA'],
+    operation_id='분 별 데이터 조회',
+    operation_description='api호출한 시간 기준 30분전 부터의 데이터',
+    tags=['주식 데이터'],
     manual_parameters=[
         openapi.Parameter('symbol', in_=openapi.IN_QUERY, description='종목코드', type=openapi.TYPE_STRING),
         openapi.Parameter('end', in_=openapi.IN_QUERY, description='종료시간(HHMMSS 형식)', type=openapi.TYPE_STRING)
@@ -152,7 +204,7 @@ def il_bong(request):
 @api_view(['GET'])
 @authentication_classes([SessionAuthentication,BasicAuthentication])
 @permission_classes([permissions.AllowAny])
-def boon_bong(request):
+def minute_data(request):
     print(request)
     symbol = request.GET.get('symbol')
     end = request.GET.get('end')
@@ -181,9 +233,9 @@ def boon_bong(request):
 ####차트 음향화####
 @swagger_auto_schema(
     method='post',
-    operation_id='data_to_sound',
+    operation_id='현재가 데이터 음향화',
     operation_description='데이터를 소리로 변환',
-    tags=['sound'],
+    tags=['음성'],
     request_body=Schema(
         type='object', 
         properties={
@@ -264,7 +316,7 @@ def my_stocks(request):
     method='post',
     operation_id='매도',
     operation_description='매도하기',
-    tags=['transaction'],
+    tags=['매수/매도'],
 )
 @api_view(['POST'])
 @authentication_classes([SessionAuthentication,BasicAuthentication])
@@ -311,7 +363,7 @@ def sell(request):
     method='post',
     operation_id='매수',
     operation_description='매수하기',
-    tags=['transaction'],
+    tags=['매수/매도'],
 )
 @api_view(['POST'])
 def buy(request):

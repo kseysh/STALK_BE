@@ -30,9 +30,9 @@ from drf_yasg import openapi
 #     print(f"오류 발생: {e}")
 @swagger_auto_schema(
     method='post',
-    operation_id='data_to_sound',
-    operation_description='데이터를 소리로 변환',
-    tags=['sound'],
+    operation_id='음성을 텍스트로 변환',
+    operation_description='사용자의 음성을 텍스트로 변환',
+    tags=['음성'],
     request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT, 
         properties={

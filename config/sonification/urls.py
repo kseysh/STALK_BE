@@ -7,8 +7,9 @@ from drf_yasg import openapi
 
 urlpatterns = [
     path('now_data/',now_data, name='now_data'),
-    path('il_bong/', il_bong, name='il_bong'),
-    path('boon_bong/', boon_bong, name='boon_bong'),
+    path('day_data/', day_data, name='day_data'),
+    path('minute_data/', minute_data, name='minute_data'),
+    path('week_data/', week_data, name='week_data'),
     path('data_to_sound/', data_to_sound, name='data_sound'),
     path('my_stocks/', my_stocks, name='my_stocks'),
     path('buy/', buy, name='buy'),
