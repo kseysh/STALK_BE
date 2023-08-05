@@ -81,10 +81,15 @@ def now_data(request):
         '고가': resp['output']['stck_hgpr'],
         '저가': resp['output']['stck_lwpr']
     }
-    # stock = Stock.objects.get(symbol=symbol)
-    # user_stock = UserStock.objects.get(stock=stock)
-    # stock.profit_loss = resp['output']['stck_prpr']*user_stock.having_qunatitiy - user_stock.price
-    # user_stock.save()
+    stock = Stock.objects.get(symbol=symbol)
+    user_stock = UserStock.objects.filter(stock=stock).first()
+
+    if user_stock is not None:
+        if user_stock.having_quantity>=1:
+            user_stock.profit_loss = int(resp['output']['stck_prpr'])*user_stock.having_quantity - user_stock.price
+            user_stock.save()
+    else:
+        pass
     return JsonResponse({'chart_data': chart_data}, safe=True)
 
 ####일봉####
@@ -296,19 +301,23 @@ def data_to_sound(request):
 
 ##############################################################################################################
 
+@swagger_auto_schema(
+    method='get',
+    operation_id='사용자의 정보 조회',
+    operation_description='보유한 종목/기록 등',
+    tags=['내정보'],
+)
 @api_view(['GET'])
 @authentication_classes([SessionAuthentication,BasicAuthentication])
 @permission_classes([permissions.AllowAny])
 def my_stocks(request):
     try:
         user = request.user
-        user_stocks = user.stocks.all()
         user_records = user.records.all()
-        user_stock = UserStock.objects.get(user=user, stock=user_stocks)
-        stock_data = StockSerializer(user_stocks, many=True).data
-        record_data = RecordSerializer(user_records, many=True)
-        user_stock_data = RecordSerializer(user_stock, many=True)
-        return Response({'stock_data' : stock_data , 'record_data' : record_data, 'user_stock_data' : user_stock_data})
+        user_stock = UserStock.objects.get(user=user)
+        user_stock_data = UserStockSerializer(user_stock).data
+        record_data = RecordSerializer(user_records, many=True).data
+        return Response({'user_stock_data' : user_stock_data , 'record_data' : record_data})
     except User.DoesNotExist:
         return Response({'error': '없는 유저입니다'}, status=404)
 
@@ -317,6 +326,14 @@ def my_stocks(request):
     operation_id='매도',
     operation_description='매도하기',
     tags=['매수/매도'],
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'stock_symbol': openapi.Schema(type=openapi.TYPE_STRING),
+            'quantity': openapi.Schema(type=openapi.TYPE_INTEGER),
+        },
+        required=['stock_symbol', 'quantity']
+    )
 )
 @api_view(['POST'])
 @authentication_classes([SessionAuthentication,BasicAuthentication])
@@ -326,25 +343,26 @@ def sell(request):
     quantity = request.data.get('quantity')
     resp = broker.fetch_price(stock_symbol)
     to_price = int(resp['output']['stck_prpr'])*quantity
-    # user = request.user
-
-    ##### 로그인 구현전이라 ######
-
-    user_id = request.data.get('user_id')
-    user = User.objects.get(pk=user_id)
-
+    user = request.user
     try:
         stock = Stock.objects.get(symbol=stock_symbol)
     except Stock.DoesNotExist:
         return Response({"error": "없는 종목입니다"}, status=400)
-    
-    user_stock = UserStock.objects.get(user=user, stock=stock)
+    try:
+        user_stock = UserStock.objects.get(user=user, stock=stock)
+    except UserStock.DoesNotExist:
+        return Response({"error": "해당 종목을 보유하고 있지 않습니다"}, status=400)
+
     if to_price <= user_stock.price:
         user.user_property += to_price
         user_stock.price -= to_price
         user.save()
+    else:
+        return Response({"error": "종목 보유량보다 큰 값을 입력 받았습니다"}, status=400)
     user_stock.having_quantity -= quantity
     user_stock.save()
+    if user_stock.having_quantity <=0:
+        user_stock.delete()
 
     record = Record.objects.create(
         user = user,
@@ -364,19 +382,25 @@ def sell(request):
     operation_id='매수',
     operation_description='매수하기',
     tags=['매수/매도'],
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'stock_symbol': openapi.Schema(type=openapi.TYPE_STRING),
+            'quantity': openapi.Schema(type=openapi.TYPE_INTEGER),
+        },
+        required=['stock_symbol', 'quantity']
+    )
 )
 @api_view(['POST'])
+@authentication_classes([SessionAuthentication,BasicAuthentication])
+@permission_classes([permissions.AllowAny])
 def buy(request):
     stock_symbol = request.data.get('stock_symbol')
     quantity = request.data.get('quantity')
     resp = broker.fetch_price(stock_symbol)
     to_price = int(resp['output']['stck_prpr'])*quantity
-    # user = request.user
 
-    ##### 로그인 구현전이라 ######
-
-    user_id = request.data.get('user_id')
-    user = User.objects.get(pk=user_id)
+    user = request.user
 
     try:
         stock = Stock.objects.get(symbol=stock_symbol)
@@ -388,8 +412,6 @@ def buy(request):
         user.save()
     else:
         return Response({"error":"돈이 부족합니다"}, status=400)
-
-    
     try:
         user_stock = UserStock.objects.get(user=user, stock=stock)
         user_stock.price += to_price
@@ -398,6 +420,7 @@ def buy(request):
     except UserStock.DoesNotExist:
         user_stock = UserStock.objects.create(
         user=user,
+        price = to_price,
         stock=stock,
         having_quantity=quantity,
         profit_loss=0
