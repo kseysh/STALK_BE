@@ -1,13 +1,11 @@
 from django.shortcuts import render
 from django.http import JsonResponse  
 from bs4 import BeautifulSoup
-import requests,codecs, re
-from datetime import datetime
+import requests
+from datetime import datetime, timezone
 
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 
 
@@ -38,33 +36,44 @@ def get_specific_news(request): # 뉴스 아이디를 통해 특정 뉴스의 �
 
 def get_news_by_stock_code(request): # 특정 종목의 뉴스리스트를 반환
     stock_code = request.GET.get('stock_code')
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
-    driver.implicitly_wait(3)
-    driver.get('https://finance.naver.com/item/news.naver?code='+ stock_code)
-    html = driver.page_source
-    soup = BeautifulSoup(html,'html.parser')
-
-    news_list = {}
-    for i in range(1,10):
-        news_a_tag = soup.select('body > div > table.type5 > tbody > tr:nth-child('+ str(1 + i) +') > td.title > a')
-        article_id = news_a_tag[0].get('href').split('article_id=')[1].split('&')[0]
-        office_id = news_a_tag[0].get('href').split('office_id=')[1].split('&')[0]
-        news_provider = soup.select('body > div > table.type5 > tbody > tr.tr:nth-child('+ str(1 + i) +') > td.info')[0].text
-        news_created_at = soup.select('body > div > table.type5 > tbody > tr:nth-child('+ str(1 + i) +') > td.date')[0].text
-        created_at_datetime = datetime.strptime(news_created_at, '%Y-%m-%d %H:%M')
-        time_difference = datetime.now() - created_at_datetime
-        minite_difference = time_difference.days * 24 * 60 + time_difference.seconds // 60
-        news_title = news_a_tag[0].text
-        news_obj = {
-            "news_title":news_title,
-            "article_id":article_id,
-            "office_id":office_id,
-            "news_provider":news_provider,
-            "created_at":news_created_at,
-            "time_difference":minite_difference,
+    search_url = 'https://openapi.naver.com/v1/search/news.json?query='+ stock_code +'&display=100&start=1&sort=date'
+    headers = {
+            'X-Naver-Client-Id': 'UH6uGY8jqImX8dvrJvux',
+            'X-Naver-Client-Secret': 'VoBSlnANAJ',
         }
-        news_list[i] = news_obj
-    return JsonResponse(news_list,json_dumps_params={'ensure_ascii': False})
+    naver_request = requests.get(search_url,headers=headers)
+    req_json = naver_request.json()
+    filtered_items = {}
+    count = 0
+    for item in req_json["items"]:
+        link = item["link"]
+        if link.startswith("https://n.news.naver.com/mnews/"):
+            title = item["title"]
+            pubDate_str = item["pubDate"]
+            pubDate = datetime.strptime(pubDate_str, '%a, %d %b %Y %H:%M:%S %z')
+            current_time = datetime.now(timezone.utc)
+            time_difference = (current_time - pubDate).total_seconds() // 60
+            if time_difference>1440:
+                time_difference= time_difference//1440
+                time_difference = str(int(time_difference)) + '일 전'
+            elif time_difference>60:
+                time_difference = time_difference//60
+                time_difference = str(int(time_difference)) + '시간 전'
+            else :
+                time_difference = str(int(time_difference)) + '분 전'
+                
+            article_id = link.split("/article/")[1].split("?sid=")[0].split("/")[-1]
+            office_id = link.split("/mnews/article/")[1].split("/")[0]
+            count += 1
+            filtered_items[count] = {
+                "title": title,
+                "created_at": pubDate_str,
+                "article_id": article_id,
+                "office_id":office_id,
+                "time_difference":time_difference
+            }
+
+    return JsonResponse(filtered_items, json_dumps_params={'ensure_ascii': False})
 
 def get_realtime_news(self): # 실시간 모든 종목의 뉴스리스트 10개를 반환
     news_url = 'https://finance.naver.com/news/news_list.naver'
@@ -84,6 +93,14 @@ def get_realtime_news(self): # 실시간 모든 종목의 뉴스리스트 10개�
         created_at_datetime = datetime.strptime(news_created_at, '%Y-%m-%d %H:%M')
         time_difference = datetime.now() - created_at_datetime
         minite_difference = time_difference.days * 24 * 60 + time_difference.seconds // 60
+        if minite_difference>1440:
+            minite_difference= minite_difference//1440
+            minite_difference = str(minite_difference) + '일 전'
+        elif minite_difference>60:
+            minite_difference = minite_difference//60
+            minite_difference = str(minite_difference) + '시간 전'
+        else :
+            minite_difference = str(minite_difference) + '분 전'
         try:
             news_img_src = news_img_tag[0].get('src')
         except(AttributeError):
