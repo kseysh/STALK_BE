@@ -30,8 +30,7 @@ from rest_framework.decorators import api_view,permission_classes,authentication
 def get_specific_news(request): # 뉴스 아이디를 통해 특정 뉴스의 글을 반환
     article_id = request.GET.get('article_id')
     office_id = request.GET.get('office_id')
-    # driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
-    driver = webdriver.Chrome("/usr/src/app/chromedriver.exe")
+    driver = webdriver.Chrome()
     driver.implicitly_wait(3)
     driver.get('https://finance.naver.com/news/news_read.naver?article_id='+ article_id +'&office_id='+ office_id)
     html = driver.page_source
