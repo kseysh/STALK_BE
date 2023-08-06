@@ -14,11 +14,13 @@ from .models import User
 from .serializers import UserSerializer
 
 
-BASE_URL = 'https://stalksound.store/'
+# BASE_URL = 'https://stalksound.store/'
 # BASE_URL = 'http://127.0.0.1:8000/'
 # KAKAO_CALLBACK_URI = 'https://stalksound.store/accounts/kakao/callback'
 # KAKAO_CALLBACK_URI = 'http://127.0.0.1:8000/accounts/kakao/callback'
-KAKAO_CALLBACK_URI = 'http://localhost:3000/kakao/callback'
+# KAKAO_CALLBACK_URI = 'http://localhost:3000/kakao/callback'
+KAKAO_CALLBACK_URI = 'https://stalk-login-test.pages.dev/kakao/callback'
+
 @api_view(['GET'])
 @authentication_classes([SessionAuthentication,BasicAuthentication])
 @permission_classes([permissions.AllowAny])
