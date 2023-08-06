@@ -7,11 +7,16 @@ class StockSerializer(serializers.ModelSerializer):
         fields = ['symbol', 'name']
 
 class UserStockSerializer(serializers.ModelSerializer):
+    stock = serializers.CharField(source='stock.name')
+    user = serializers.CharField(source='user.user_nickname')
+
     class Meta:
         model = UserStock
         fields = '__all__'
 
 class RecordSerializer(serializers.ModelSerializer):
+    stock = serializers.CharField(source='stock.name')
+    user = serializers.CharField(source='user.user_nickname')
     class Meta:
         model = Record
         fields = '__all__'

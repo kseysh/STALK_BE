@@ -4,6 +4,9 @@ from accounts.models import User
 class Stock(models.Model):
     symbol = models.CharField(max_length=10, unique=True)
     name = models.CharField(max_length=100) 
+    
+    def __str__(self):
+        return self.name
 
 class UserStock(models.Model):
     stock = models.ForeignKey(Stock, on_delete=models.CASCADE)
@@ -11,8 +14,9 @@ class UserStock(models.Model):
     having_quantity = models.IntegerField()
     price = models.IntegerField()
     profit_loss = models.IntegerField()
-
     
+    def __str__(self):
+        return f"{self.stock} - {self.user}"
 
 class Record(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='records', default=1)
@@ -22,3 +26,6 @@ class Record(models.Model):
     price = models.IntegerField()
     left_money = models.IntegerField()
     date = models.DateField(auto_now_add=True)
+    
+    def __str__(self):
+        return f"{self.stock} - {self.user}"
