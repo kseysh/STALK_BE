@@ -22,6 +22,7 @@ def get_secret(setting,secrets_dict = secrets):
 SECRET_KEY = get_secret('SECRET_KEY')
 KAKAO_REST_API_KEY = get_secret('KAKAO_REST_API_KEY')
 
+
 AUTH_USER_MODEL = 'accounts.User'
 DEBUG = True
 
@@ -145,11 +146,11 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
 CORS_ORIGIN_ALLOW_ALL = True
 
-CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_CREDENTIALS = False # cors 관련 인증 비활성화
 
-CSRF_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = False # True일 시 프론트가 https로 요청을 보내야함
 
-SESSION_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = False # True일 시 프론트가 https로 요청을 보내야함
 
 CSRF_COOKIE_SAMESITE = 'None'
 
@@ -163,7 +164,6 @@ SWAGGER_SETTINGS = {
 
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
-    # 'allauth.account.auth_backends.AuthenticationBackend',
 ]
 
 ACCOUNT_EMAIL_VERIFICATION = "none" # 이메일 확인을 끔
