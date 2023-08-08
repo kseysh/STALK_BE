@@ -27,7 +27,7 @@ class UserManager(BaseUserManager):
 
 class User(AbstractUser):
     username = models.CharField(verbose_name='유저 아이디',max_length=64,unique=True)
-    user_email = models.EmailField(verbose_name= "유저 이메일",max_length=255,blank=True)
+    user_email = models.EmailField(verbose_name= "유저 이메일",max_length=255,blank=True,null=True)
     user_property = models.IntegerField(verbose_name= "유저 자산",default=3000000)
     user_nickname = models.CharField(verbose_name="유저 닉네임",max_length=32)
     USERNAME_FIELD = 'username'

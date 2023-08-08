@@ -24,7 +24,7 @@ KAKAO_REST_API_KEY = get_secret('KAKAO_REST_API_KEY')
 
 
 AUTH_USER_MODEL = 'accounts.User'
-DEBUG = True
+DEBUG = False
 
 SOCIALACCOUNT_LOGIN_ON_GET = True # 중간 창 없이 카카오 로그인 페이지로 넘어가게 하는 설정
 
@@ -146,11 +146,11 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
 CORS_ORIGIN_ALLOW_ALL = True
 
-CORS_ALLOW_CREDENTIALS = False # cors 관련 인증 비활성화
+CORS_ALLOW_CREDENTIALS = False # True여야 쿠키가 cross-site HTTP 요청에 포함될 수 있다
 
-CSRF_COOKIE_SECURE = False # True일 시 프론트가 https로 요청을 보내야함
+CSRF_COOKIE_SECURE = True # True일 시 프론트가 https로 요청을 보내야함
 
-SESSION_COOKIE_SECURE = False # True일 시 프론트가 https로 요청을 보내야함
+SESSION_COOKIE_SECURE = True # True일 시 프론트가 https로 요청을 보내야함
 
 CSRF_COOKIE_SAMESITE = 'None'
 
