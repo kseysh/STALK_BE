@@ -12,6 +12,7 @@ urlpatterns = [
     path('week_data/', week_data, name='week_data'),
     path('data_to_sound/', data_to_sound, name='data_sound'),
     path('my_stocks/', my_stocks, name='my_stocks'),
+    path('repeat_minute_data/', repeat_minute_data, name='repeat_minute_data'),
     path('buy/', buy, name='buy'),
     path('sell/', sell, name='sell'),
 ]

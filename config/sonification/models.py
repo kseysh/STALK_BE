@@ -14,7 +14,8 @@ class UserStock(models.Model):
     having_quantity = models.IntegerField()
     price = models.IntegerField()
     profit_loss = models.IntegerField()
-    
+    rate_profit_loss = models.DecimalField(max_digits=10, decimal_places=2)
+    now_price = models.IntegerField(default=0)
     def __str__(self):
         return f"{self.stock} - {self.user}"
 
