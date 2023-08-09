@@ -18,8 +18,8 @@ from .serializers import UserSerializer
 # BASE_URL = 'http://127.0.0.1:8000/'
 # KAKAO_CALLBACK_URI = 'https://stalksound.store/accounts/kakao/callback'
 # KAKAO_CALLBACK_URI = 'http://127.0.0.1:8000/accounts/kakao/callback'
-KAKAO_CALLBACK_URI = 'http://localhost:3000/kakao/callback'
-# KAKAO_CALLBACK_URI = 'https://stalk-login-test.pages.dev/kakao/callback'
+# KAKAO_CALLBACK_URI = 'http://localhost:3000/kakao/callback'
+KAKAO_CALLBACK_URI = 'https://stalk-login-test.pages.dev/kakao/callback'
 
 @api_view(['GET'])
 @authentication_classes([SessionAuthentication,BasicAuthentication])
@@ -84,8 +84,8 @@ def kakao_callback(request):
             },
             status=status.HTTP_200_OK,
         )
-        res.set_cookie("access", access_token, httponly=True)
-        res.set_cookie("refresh", refresh_token, httponly=True)
+        res.set_cookie("accessToken", value=access_token, max_age=None, expires=None, secure=True, samesite=None, httponly=True)
+        res.set_cookie("refreshToken", value=refresh_token, max_age=None, expires=None, secure=True, samesite=None,httponly=True)
         return res
     except User.DoesNotExist:
         user = User.objects.create_user(username=username)
@@ -108,8 +108,8 @@ def kakao_callback(request):
             },
             status=status.HTTP_200_OK,
         )
-        res.set_cookie("access", access_token, httponly=True)
-        res.set_cookie("refresh", refresh_token, httponly=True)
+        res.set_cookie("accessToken", access_token, httponly=True,secure=True,samesite="None")
+        res.set_cookie("refreshToken", refresh_token, httponly=True,secure=True,samesite="None")
         return res
     
 @api_view(['GET'])
@@ -119,16 +119,21 @@ def kakao_logout(self):
     response = Response({
         "message": "Logout success"
         }, status=status.HTTP_202_ACCEPTED)
-    response.delete_cookie("access")
-    response.delete_cookie("refresh")
+    response.delete_cookie("accessToken")
+    response.delete_cookie("refreshToken")
     return response
 
 @api_view(['GET'])
 @authentication_classes([SessionAuthentication,BasicAuthentication])
-@permission_classes([permissions.IsAuthenticated])
+# @permission_classes([permissions.IsAuthenticated])
+@permission_classes([permissions.AllowAny])
 def check_jwt_user(request):
+    # access = request.COOKIES['accessToken']
+    # return 
     try:
-        access = request.COOKIES['access']
+        access = request.COOKIES['accessToken']
+        # auth_header = request.META.get('HTTP_AUTHORIZATION')
+        # access = auth_header.split(' ')[1]
         payload = jwt.decode(access, settings.SECRET_KEY, algorithms=['HS256'])
         username = payload.get('username')
         user = get_object_or_404(User, username=username)
@@ -136,18 +141,23 @@ def check_jwt_user(request):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     except(jwt.exceptions.ExpiredSignatureError):
-        data = {'refresh': request.COOKIES.get('refresh', None)}
+        # auth_header = request.META.get('HTTP_AUTHORIZATION')
+        # refresh = auth_header.split(' ')[2]
+        # data = {'refresh': refresh}
+        data = {'refresh': request.COOKIES.get('refreshToken', None)}
         serializer = TokenRefreshSerializer(data=data)
         if serializer.is_valid(raise_exception=True):
-            access = serializer.data.get('access', None)
-            refresh = serializer.data.get('refresh', None)
+            access = serializer.data.get('accessToken', None)
+            refresh = serializer.data.get('refreshToken', None)
             payload = jwt.decode(access, settings.SECRET_KEY, algorithms=['HS256'])
             username = payload.get('username')
             user = get_object_or_404(User, username=username)
             serializer = UserSerializer(instance=user)
             res = Response(serializer.data, status=status.HTTP_200_OK)
-            res.set_cookie('access', access)
-            res.set_cookie('refresh', refresh)
+            res.set_cookie('accessToken', access, httponly=True,secure=True,samesite="None")
+            res.set_cookie('refreshToken', refresh, httponly=True,secure=True,samesite="None")
             return res
         raise jwt.exceptions.InvalidTokenError
+
+
 

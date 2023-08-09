@@ -24,7 +24,7 @@ KAKAO_REST_API_KEY = get_secret('KAKAO_REST_API_KEY')
 
 
 AUTH_USER_MODEL = 'accounts.User'
-DEBUG = False
+DEBUG = True
 
 SOCIALACCOUNT_LOGIN_ON_GET = True # 중간 창 없이 카카오 로그인 페이지로 넘어가게 하는 설정
 
@@ -144,9 +144,19 @@ STATIC_URL = '/static/'
 
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
-CORS_ORIGIN_ALLOW_ALL = True
+# CORS_ORIGIN_ALLOW_ALL = True
 
-CORS_ALLOW_CREDENTIALS = False # True여야 쿠키가 cross-site HTTP 요청에 포함될 수 있다
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:3000',
+    'http://127.0.0.1:8000',
+    'http://stalksound.store',
+    'https://stalksound.store',
+    'https://stalk-login-test.pages.dev/',
+    'http://stalk-login-test.pages.dev/',
+    'http://localhost:8000',
+]
+
+CORS_ALLOW_CREDENTIALS = True # True여야 쿠키가 cross-site HTTP 요청에 포함될 수 있다
 
 CSRF_COOKIE_SECURE = True # True일 시 프론트가 https로 요청을 보내야함
 
@@ -155,6 +165,8 @@ SESSION_COOKIE_SECURE = True # True일 시 프론트가 https로 요청을 보�
 CSRF_COOKIE_SAMESITE = 'None'
 
 SESSION_COOKIE_SAMESITE = 'None'
+
+CSRF_COOKIE_HTTPONLY = False
 
 SWAGGER_SETTINGS = {
     'SECURITY_DEFINITIONS': {
