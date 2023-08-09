@@ -72,7 +72,6 @@ def now_data(request):
     if not symbol:
         return JsonResponse({'error': 'Symbol not provided'}, status=400)
     resp = broker.fetch_price(symbol)
-    print(resp)
     chart_data = { 
         '전일대비부호': resp['output']['prdy_vrss_sign'],
         '전일 대비율': resp['output']['prdy_ctrt'],
@@ -82,12 +81,22 @@ def now_data(request):
         '저가': resp['output']['stck_lwpr']
     }
     stock = Stock.objects.get(symbol=symbol)
-    user_stock = UserStock.objects.filter(stock=stock).first()
+    user_stock = UserStock.objects.filter(stock=stock)
 
     if user_stock is not None:
-        if user_stock.having_quantity>=1:
-            user_stock.profit_loss = int(resp['output']['stck_prpr'])*user_stock.having_quantity - user_stock.price
-            user_stock.save()
+        for user_stock in user_stock:
+            if user_stock.having_quantity >= 1:
+                now_stock_price=int(resp['output']['stck_prpr']) * user_stock.having_quantity
+                user_stock.profit_loss = user_stock.price - now_stock_price
+                user_stock.now_price = now_stock_price
+                user_stock.rate_profit_loss=(now_stock_price-user_stock.price)/user_stock.price*100
+
+                user_stock.save()
+        # if user_stock.having_quantity>=1:
+        #     user_stock.profit_loss = user_stock.price - int(resp['output']['stck_prpr'])*user_stock.having_quantity
+        #     print(user_stock.having_quantity)
+        #     print(user_stock.profit_loss)
+        #     user_stock.save()
     else:
         pass
     return JsonResponse({'chart_data': chart_data}, safe=True)
@@ -215,7 +224,7 @@ def minute_data(request):
     end = request.GET.get('end')
     result = broker._fetch_today_1m_ohlcv(symbol,end)
     daily_price = result['output2']
-    jm = result['output1']['hts_kor_isnm'] ##종목 ㅋㅋ
+    jm = result['output1']['hts_kor_isnm'] ##종목
     chart= [] 
     data= []
     mx = 0 ; mn = 0
@@ -223,10 +232,7 @@ def minute_data(request):
         chart_data = {
             "종목": jm,
             '날짜': dp['stck_bsop_date'],
-            '시가': dp['stck_oprc'],
             '현재가': dp['stck_prpr'],
-            '고가': dp['stck_hgpr'],
-            '저가': dp['stck_lwpr']
         }
         chart.append(int(dp['stck_prpr']))
         data.append(chart_data)
@@ -234,6 +240,47 @@ def minute_data(request):
         mn = min(mn,int(dp['stck_lwpr']))
     lista = substitution(mx,mn,chart)
     return JsonResponse({'data': data, 'lista': lista}, safe=False)
+
+@swagger_auto_schema(
+    method='get',
+    operation_id='(여러번)분 별 데이터 조회',
+    operation_description='(여러번)api호출한 시간 기준 30분전 부터의 데이터',
+    tags=['주식 데이터'],
+    manual_parameters=[
+        openapi.Parameter('count', in_=openapi.IN_QUERY, description='몇 번 호출', type=openapi.TYPE_STRING),
+        openapi.Parameter('symbol', in_=openapi.IN_QUERY, description='종목코드', type=openapi.TYPE_STRING),
+        openapi.Parameter('end', in_=openapi.IN_QUERY, description='종료시간(HHMMSS 형식)', type=openapi.TYPE_STRING)
+    ],
+)
+@api_view(['GET'])
+@authentication_classes([SessionAuthentication,BasicAuthentication])
+@permission_classes([permissions.AllowAny])
+def repeat_minute_data(request):
+    count = request.GET.get('count')
+    symbol = request.GET.get('symbol')
+    end = request.GET.get('end')
+    chart= [] 
+    data= []
+    mx = 0 ; mn = 0
+    for i in range (int(count)):
+        here_end = str(int(end) - 30*(i))
+        result = broker._fetch_today_1m_ohlcv(symbol,here_end)
+        print(result)
+        daily_price = result['output2']
+        jm = result['output1']['hts_kor_isnm'] ##종목 ㅋㅋ
+        for dp in reversed(daily_price):
+            chart_data = {
+                "종목": jm,
+                '날짜': dp['stck_bsop_date'],
+                '현재가': dp['stck_prpr'],
+            }
+            chart.append(int(dp['stck_prpr']))
+            data.append(chart_data)
+    mx = max(mx,int(dp['stck_hgpr']))
+    mn = min(mn,int(dp['stck_lwpr']))
+    lista = substitution(mx,mn,chart)
+    return JsonResponse({'data': data, 'lista': lista}, safe=False)
+
 
 ####차트 음향화####
 @swagger_auto_schema(
@@ -423,7 +470,9 @@ def buy(request):
         price = to_price,
         stock=stock,
         having_quantity=quantity,
-        profit_loss=0
+        profit_loss=0,
+        now_price = to_price,
+        rate_profit_loss = 0
         )
 
     record = Record.objects.create(
