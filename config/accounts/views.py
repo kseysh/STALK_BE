@@ -110,6 +110,7 @@ def kakao_callback(request):
         )
         res.set_cookie("accessToken", access_token, httponly=True,secure=True,samesite=None)
         res.set_cookie("refreshToken", refresh_token, httponly=True,secure=True,samesite=None)
+
         return res
     
 @api_view(['GET'])
@@ -140,7 +141,7 @@ def check_jwt_user(request):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     except(jwt.exceptions.ExpiredSignatureError):
-        data = {'refreshToken': request.COOKIES.get('refreshToken', None)}
+        data = {'refresh': request.COOKIES.get('refreshToken', None)}
         serializer = TokenRefreshSerializer(data=data)
         if serializer.is_valid(raise_exception=True):
             access = serializer.data.get('accessToken', None)
@@ -152,6 +153,7 @@ def check_jwt_user(request):
             res = Response(serializer.data, status=status.HTTP_200_OK)
             res.set_cookie("accessToken", value=access, max_age=None, expires=None, secure=True, samesite=None, httponly=True)
             res.set_cookie("refreshToken", value=refresh, max_age=None, expires=None, secure=True, samesite=None,httponly=True)
+
             return res
         raise jwt.exceptions.InvalidTokenError
 

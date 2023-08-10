@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service as ChromeService
 
+
 from webdriver_manager.chrome import ChromeDriverManager
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
@@ -37,6 +38,7 @@ def get_specific_news(request): # 뉴스 아이디를 통해 특정 뉴스의 �
     chrome_options.add_argument('--disable-dev-shm-usage')
     driver = webdriver.Chrome(service=ChromeService('/usr/bin/chromedriver'),options=chrome_options)
     
+
     driver.get('https://finance.naver.com/news/news_read.naver?article_id='+ article_id +'&office_id='+ office_id)
     
     html = driver.page_source
@@ -47,6 +49,8 @@ def get_specific_news(request): # 뉴스 아이디를 통해 특정 뉴스의 �
     reporter_name = soup.select('#contentarea_left > div.boardView.size4 > div.card_journalist > div.info_thumb > a > span')[0].text
     reporter_image =  soup.select('#contentarea_left > div.boardView.size4 > div.card_journalist > a > img')[0].get('src')
     created_at = soup.select('#contentarea_left > div.boardView.size4 > div.article_header > div.article_info > div > span')[0].text
+
+    driver.close()
 
     news_obj = {
             "news_title":news_title,

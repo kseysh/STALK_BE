@@ -155,6 +155,7 @@ CORS_ALLOWED_ORIGINS = [
     'https://stalk-login-test.pages.dev',
     'http://stalk-login-test.pages.dev/',
     'http://stalk-login-test.pages.dev',
+
     'http://localhost:8000',
 ]
 
