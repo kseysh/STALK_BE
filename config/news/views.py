@@ -1,13 +1,12 @@
-from django.shortcuts import render
 from django.http import JsonResponse  
 from bs4 import BeautifulSoup
 import requests
 from datetime import datetime, timezone
 
 from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.chrome.service import Service as ChromeService
 
+from webdriver_manager.chrome import ChromeDriverManager
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import permissions 
@@ -30,9 +29,16 @@ from rest_framework.decorators import api_view,permission_classes,authentication
 def get_specific_news(request): # 뉴스 아이디를 통해 특정 뉴스의 글을 반환
     article_id = request.GET.get('article_id')
     office_id = request.GET.get('office_id')
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
-    driver.implicitly_wait(1)
+    # chrome_service = Service('/usr/bin/chromedriver')
+    
+    chrome_options = webdriver.ChromeOptions()
+    chrome_options.add_argument("--headless")
+    chrome_options.add_argument('--no-sandbox')
+    chrome_options.add_argument('--disable-dev-shm-usage')
+    driver = webdriver.Chrome(service=ChromeService('/usr/bin/chromedriver'),options=chrome_options)
+    
     driver.get('https://finance.naver.com/news/news_read.naver?article_id='+ article_id +'&office_id='+ office_id)
+    
     html = driver.page_source
     soup = BeautifulSoup(html,'html.parser')
 
@@ -49,6 +55,7 @@ def get_specific_news(request): # 뉴스 아이디를 통해 특정 뉴스의 �
             "reporter_image":reporter_image,
             "created_at":created_at,
         }
+    driver.quit()
     return JsonResponse(news_obj,json_dumps_params={'ensure_ascii': False})
 
 @swagger_auto_schema(
