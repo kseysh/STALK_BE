@@ -92,13 +92,53 @@ def now_data(request):
                 user_stock.rate_profit_loss=(now_stock_price-user_stock.price)/user_stock.price*100
 
                 user_stock.save()
-        # if user_stock.having_quantity>=1:
-        #     user_stock.profit_loss = user_stock.price - int(resp['output']['stck_prpr'])*user_stock.having_quantity
-        #     print(user_stock.having_quantity)
-        #     print(user_stock.profit_loss)
-        #     user_stock.save()
     else:
         pass
+    return JsonResponse({'chart_data': chart_data}, safe=True)
+
+##해외 현재상태 ##
+@swagger_auto_schema(
+    method='get',
+    operation_id='(해외)현재 주가 확인 및 사용자 투자종목 업데이트',
+    operation_description='api호출한 순간의 해당종목 데이터',
+    tags=['(해외)주식 데이터'],
+    manual_parameters=[
+        openapi.Parameter('symbol', in_=openapi.IN_QUERY, description='종목코드', type=openapi.TYPE_STRING),
+    ],
+)
+@api_view(['GET'])
+@authentication_classes([SessionAuthentication,BasicAuthentication])
+@permission_classes([permissions.AllowAny])
+def f_now_data(request):
+    symbol = request.GET.get('symbol')
+    broker = mojito.KoreaInvestment(
+    api_key=key,
+    api_secret=secret,
+    acc_no=acc_no,
+    exchange="나스닥",
+    mock=True
+    )
+    resp = broker.fetch_oversea_price(symbol)
+    chart_data = { 
+        '거래량': resp['output']['tvol'],
+        '현재가': resp['output']['last'],
+        '대비': resp['output']['diff'],
+        '등락율': resp['output']['rate']
+    }
+    stock = Stock.objects.get(symbol=symbol)
+    user_stock = UserStock.objects.filter(stock=stock)
+
+    if user_stock is not None:
+        for user_stock in user_stock:
+            if user_stock.having_quantity >= 1:
+                now_stock_price=float(resp['output']['last']) * user_stock.having_quantity
+                user_stock.profit_loss = user_stock.price - now_stock_price
+                user_stock.now_price = now_stock_price
+                user_stock.rate_profit_loss=(now_stock_price-user_stock.price)/user_stock.price*100
+
+                user_stock.save()
+    else:
+        return JsonResponse({'chart_data': chart_data}, safe=True)
     return JsonResponse({'chart_data': chart_data}, safe=True)
 
 ####일봉####
@@ -128,10 +168,8 @@ def day_data(request):
         timeframe='D',  
         adj_price=True
     )
-    print(resp)
     daily_price = resp['output2']
-    print(daily_price)
-    jm = resp['output1']['hts_kor_isnm'] #종목 ㅋㅋ
+    jm = resp['output1']['hts_kor_isnm']
     print(jm)
     chart= []
     data=[]
@@ -140,15 +178,59 @@ def day_data(request):
         chart_data = {
             "종목": jm,
             '날짜': dp['stck_bsop_date'],
-            '시가': dp['stck_oprc'],
             '현재가': dp['stck_clpr'],
-            '고가': dp['stck_hgpr'],
-            '저가': dp['stck_lwpr']
         }
         chart.append(int(dp['stck_clpr']))
         data.append(chart_data)
         mx = max(mx,int(dp['stck_hgpr']))
         mn = min(mn,int(dp['stck_lwpr']))
+    lista = substitution(mx,mn,chart)
+    return JsonResponse({'data': data, 'lista': lista}, safe=True)
+
+####해외 일별 ####
+
+@swagger_auto_schema(
+    method='get',
+    operation_id='(해외)날짜 별 데이터 조회',
+    operation_description='최대 100일 조회가능/ 시작일~종료일',
+    tags=['(해외)주식 데이터'],
+    manual_parameters=[
+        openapi.Parameter('symbol', in_=openapi.IN_QUERY, description='종목코드', type=openapi.TYPE_STRING),
+        openapi.Parameter('end', in_=openapi.IN_QUERY, description='종료일(YYYYMMDD 형식)', type=openapi.TYPE_STRING),
+    ],
+)
+@api_view(['GET'])
+@authentication_classes([SessionAuthentication,BasicAuthentication])
+@permission_classes([permissions.AllowAny])
+def f_day_data(request):
+    symbol = request.GET.get('symbol')
+    end = request.GET.get('end') 
+    broker = mojito.KoreaInvestment(
+    api_key=key,
+    api_secret=secret,
+    acc_no=acc_no,
+    exchange="나스닥",
+    mock=True
+    )
+    resp = broker.fetch_ohlcv_overesea(
+        end_day=end,
+        symbol=symbol, #종목
+        timeframe='D',  
+        adj_price=True
+    )
+    daily_price = resp['output2']
+    chart= []
+    data=[]
+    mx = 0 ; mn = 0
+    for dp in reversed(daily_price):
+        chart_data = {
+            '날짜': dp['xymd'],
+            '종가': dp['clos'],
+        }
+        chart.append(float(dp['clos']))
+        data.append(chart_data)
+        mx = max(mx,float(dp['high']))
+        mn = min(mn,float(dp['low']))
     lista = substitution(mx,mn,chart)
     return JsonResponse({'data': data, 'lista': lista}, safe=True)
 
@@ -192,15 +274,59 @@ def week_data(request):
         chart_data = {
             "종목": jm,
             '날짜': dp['stck_bsop_date'],
-            '시가': dp['stck_oprc'],
             '현재가': dp['stck_clpr'],
-            '고가': dp['stck_hgpr'],
-            '저가': dp['stck_lwpr']
         }
         chart.append(int(dp['stck_clpr']))
         data.append(chart_data)
         mx = max(mx,int(dp['stck_hgpr']))
         mn = min(mn,int(dp['stck_lwpr']))
+    lista = substitution(mx,mn,chart)
+    return JsonResponse({'data': data, 'lista': lista}, safe=True)
+
+####주 데이터 해외####
+
+@swagger_auto_schema(
+    method='get',
+    operation_id='(해외)주 별 데이터 조회',
+    operation_description='일 별 데이터와 동일하게 최대 100개의 데이터 조회 가능',
+    tags=['(해외)주식 데이터'],
+    manual_parameters=[
+        openapi.Parameter('symbol', in_=openapi.IN_QUERY, description='종목코드', type=openapi.TYPE_STRING),
+        openapi.Parameter('end', in_=openapi.IN_QUERY, description='종료일(YYYYMMDD 형식)', type=openapi.TYPE_STRING),
+    ],
+)
+@api_view(['GET'])
+@authentication_classes([SessionAuthentication,BasicAuthentication])
+@permission_classes([permissions.AllowAny])
+def f_week_data(request):
+    symbol = request.GET.get('symbol')
+    end = request.GET.get('end') 
+    broker = mojito.KoreaInvestment(
+    api_key=key,
+    api_secret=secret,
+    acc_no=acc_no,
+    exchange="나스닥",
+    mock=True
+    )
+    resp = broker.fetch_ohlcv_overesea(
+        end_day=end,
+        symbol=symbol, #종목
+        timeframe='W',  
+        adj_price=True
+    )
+    daily_price = resp['output2']
+    chart= []
+    data=[]
+    mx = 0 ; mn = 0
+    for dp in reversed(daily_price):
+        chart_data = {
+            '날짜': dp['xymd'],
+            '종가': dp['clos'],
+        }
+        chart.append(float(dp['clos']))
+        data.append(chart_data)
+        mx = max(mx,float(dp['high']))
+        mn = min(mn,float(dp['low']))
     lista = substitution(mx,mn,chart)
     return JsonResponse({'data': data, 'lista': lista}, safe=True)
 
