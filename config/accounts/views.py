@@ -18,8 +18,8 @@ from .serializers import UserSerializer
 # BASE_URL = 'http://127.0.0.1:8000/'
 # KAKAO_CALLBACK_URI = 'https://stalksound.store/accounts/kakao/callback'
 # KAKAO_CALLBACK_URI = 'http://127.0.0.1:8000/accounts/kakao/callback'
-# KAKAO_CALLBACK_URI = 'http://localhost:3000/kakao/callback'
-KAKAO_CALLBACK_URI = 'https://stalk-login-test.pages.dev/kakao/callback'
+KAKAO_CALLBACK_URI = 'http://localhost:3000/kakao/callback'
+# KAKAO_CALLBACK_URI = 'https://stalk-login-test.pages.dev/kakao/callback'
 
 @api_view(['GET'])
 @authentication_classes([SessionAuthentication,BasicAuthentication])
@@ -108,13 +108,15 @@ def kakao_callback(request):
             },
             status=status.HTTP_200_OK,
         )
-        res.set_cookie("accessToken", access_token, httponly=True,secure=True,samesite="None")
-        res.set_cookie("refreshToken", refresh_token, httponly=True,secure=True,samesite="None")
+        res.set_cookie("accessToken", access_token, httponly=True,secure=True,samesite=None)
+        res.set_cookie("refreshToken", refresh_token, httponly=True,secure=True,samesite=None)
+
         return res
     
 @api_view(['GET'])
 @authentication_classes([SessionAuthentication,BasicAuthentication])
-@permission_classes([permissions.IsAuthenticated])
+# @permission_classes([permissions.IsAuthenticated])
+@permission_classes([permissions.AllowAny])
 def kakao_logout(self):
     response = Response({
         "message": "Logout success"
@@ -132,8 +134,6 @@ def check_jwt_user(request):
     # return 
     try:
         access = request.COOKIES['accessToken']
-        # auth_header = request.META.get('HTTP_AUTHORIZATION')
-        # access = auth_header.split(' ')[1]
         payload = jwt.decode(access, settings.SECRET_KEY, algorithms=['HS256'])
         username = payload.get('username')
         user = get_object_or_404(User, username=username)
@@ -141,9 +141,6 @@ def check_jwt_user(request):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     except(jwt.exceptions.ExpiredSignatureError):
-        # auth_header = request.META.get('HTTP_AUTHORIZATION')
-        # refresh = auth_header.split(' ')[2]
-        # data = {'refresh': refresh}
         data = {'refresh': request.COOKIES.get('refreshToken', None)}
         serializer = TokenRefreshSerializer(data=data)
         if serializer.is_valid(raise_exception=True):
@@ -154,8 +151,9 @@ def check_jwt_user(request):
             user = get_object_or_404(User, username=username)
             serializer = UserSerializer(instance=user)
             res = Response(serializer.data, status=status.HTTP_200_OK)
-            res.set_cookie('accessToken', access, httponly=True,secure=True,samesite="None")
-            res.set_cookie('refreshToken', refresh, httponly=True,secure=True,samesite="None")
+            res.set_cookie("accessToken", value=access, max_age=None, expires=None, secure=True, samesite=None, httponly=True)
+            res.set_cookie("refreshToken", value=refresh, max_age=None, expires=None, secure=True, samesite=None,httponly=True)
+
             return res
         raise jwt.exceptions.InvalidTokenError
 

@@ -152,7 +152,10 @@ CORS_ALLOWED_ORIGINS = [
     'http://stalksound.store',
     'https://stalksound.store',
     'https://stalk-login-test.pages.dev/',
+    'https://stalk-login-test.pages.dev',
     'http://stalk-login-test.pages.dev/',
+    'http://stalk-login-test.pages.dev',
+
     'http://localhost:8000',
 ]
 
