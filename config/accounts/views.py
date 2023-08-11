@@ -18,8 +18,8 @@ from .serializers import UserSerializer
 # BASE_URL = 'http://127.0.0.1:8000/'
 # KAKAO_CALLBACK_URI = 'https://stalksound.store/accounts/kakao/callback'
 # KAKAO_CALLBACK_URI = 'http://127.0.0.1:8000/accounts/kakao/callback'
-KAKAO_CALLBACK_URI = 'http://localhost:3000/kakao/callback'
-# KAKAO_CALLBACK_URI = 'https://stalk-login-test.pages.dev/kakao/callback'
+# KAKAO_CALLBACK_URI = 'http://localhost:3000/kakao/callback'
+KAKAO_CALLBACK_URI = 'https://stalk-login-test.pages.dev/kakao/callback'
 
 @api_view(['GET'])
 @authentication_classes([SessionAuthentication,BasicAuthentication])
@@ -108,8 +108,8 @@ def kakao_callback(request):
             },
             status=status.HTTP_200_OK,
         )
-        res.set_cookie("accessToken", access_token, httponly=True,secure=True,samesite=None)
-        res.set_cookie("refreshToken", refresh_token, httponly=True,secure=True,samesite=None)
+        res.set_cookie("accessToken",  value=access_token, max_age=None, expires=None, secure=True, samesite=None, httponly=True)
+        res.set_cookie("refreshToken",  value=refresh_token, max_age=None, expires=None, secure=True, samesite=None, httponly=True)
 
         return res
     
