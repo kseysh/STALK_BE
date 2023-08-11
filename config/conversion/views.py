@@ -1,4 +1,6 @@
 from django.shortcuts import render
+import base64
+import io
 import speech_recognition as sr
 from pydub import AudioSegment
 from rest_framework.decorators import api_view
@@ -54,17 +56,15 @@ def speech_recognition(request):
     recognizer = sr.Recognizer()
 
     # 음성 파일 받기 (request.FILES를 통해 업로드한 음성파일을 받음)
-    audio_file = request.FILES.get('audio')
-
+    audio_file = request.data.get('audio')
+    print(audio)
+    audio_binary = base64.b64decode(audio_file)
     # 업로드된 음성 파일을 wav 형식으로 변환
-    audio_data = AudioSegment.from_file(audio_file, format="m4a")
-    wav_stream = BytesIO()
-    audio_data.export(wav_stream, format="wav")
-    wav_stream.seek(0)
+    audio_data = AudioSegment.from_file(io.BytesIO(audio_binary))
 
     # 음성파일로부터 음성 인식
     try:
-        with sr.AudioFile(wav_stream) as source:
+        with sr.AudioFile(audio_data) as source:
             audio = recognizer.record(source)
 
         result = recognizer.recognize_google(audio, language="ko-KR")  # 한국어로 번역 + 인식함
