@@ -6,5 +6,6 @@ urlpatterns = [
     path('kakao/callback/', views.kakao_callback),
     path('kakao/logout/', views.kakao_logout),
     path('userinfo/',views.check_jwt_user),
+    path('post/',views.post),
 
 ]

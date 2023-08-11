@@ -7,6 +7,9 @@ from rest_framework import status
 from io import BytesIO
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+from rest_framework.authentication import SessionAuthentication, BasicAuthentication
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework import permissions 
 
 # recognizer = sr.Recognizer()
 
@@ -45,6 +48,8 @@ from drf_yasg import openapi
     ),
 )
 @api_view(['POST'])
+@authentication_classes([SessionAuthentication, BasicAuthentication])
+@permission_classes([permissions.AllowAny])
 def speech_recognition(request):
     recognizer = sr.Recognizer()
 
@@ -66,5 +71,3 @@ def speech_recognition(request):
         return Response({"result": result}, status=status.HTTP_200_OK)
     except sr.UnknownValueError:
         return Response({"error": "음성 인식 실패: 알아들을 수 없는 음성"}, status=status.HTTP_400_BAD_REQUEST)
-    except sr.RequestError as e:
-        return Response({"error": f"오류 발생: {e}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

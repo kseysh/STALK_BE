@@ -4,7 +4,9 @@ from .models import Stock, Record, UserStock
 class StockSerializer(serializers.ModelSerializer):
     class Meta:
         model = Stock
-        fields = ['symbol', 'name']
+        fields = ['liked_user']
+
+
 
 class UserStockSerializer(serializers.ModelSerializer):
     stock = serializers.CharField(source='stock.name')
