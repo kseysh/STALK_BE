@@ -7,6 +7,9 @@ from rest_framework import status
 from io import BytesIO
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+from rest_framework.authentication import SessionAuthentication, BasicAuthentication
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework import permissions 
 
 # recognizer = sr.Recognizer()
 
@@ -44,6 +47,8 @@ from drf_yasg import openapi
         required=['audio'],
     ),
 )
+@authentication_classes([SessionAuthentication, BasicAuthentication])
+@permission_classes([permissions.AllowAny])
 @api_view(['POST'])
 def speech_recognition(request):
     recognizer = sr.Recognizer()

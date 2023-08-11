@@ -736,7 +736,10 @@ def like_stock(request):
     except Stock.DoesNotExist:
         return Response(status=404)
 
+    user = request.user
+    user.liked_stock.add(user)  
     stock.likes += 1
     stock.save()
+    s = StockSerializer
 
     return Response({'message': '찜 완료'})
