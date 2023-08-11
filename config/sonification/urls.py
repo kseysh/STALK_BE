@@ -6,11 +6,13 @@ from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 
 urlpatterns = [
+    path('transaction_rank/',transaction_rank, name='transaction_rank'),
     path('now_data/',now_data, name='now_data'),
     path('f_now_data/',f_now_data, name='f_now_data'),
     path('day_data/', day_data, name='day_data'),
     path('f_day_data/', f_day_data, name='f_day_data'),
     path('minute_data/', minute_data, name='minute_data'),
+    path('f_minute_data/', f_minute_data, name='f_minute_data'),
     path('week_data/', week_data, name='week_data'),
     path('f_week_data/', f_week_data, name='f_week_data'),
     path('data_to_sound/', data_to_sound, name='data_sound'),
@@ -18,4 +20,5 @@ urlpatterns = [
     path('repeat_minute_data/', repeat_minute_data, name='repeat_minute_data'),
     path('buy/', buy, name='buy'),
     path('sell/', sell, name='sell'),
+    path('like_stock/', like_stock, name='like_stock'),
 ]

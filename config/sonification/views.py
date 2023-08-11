@@ -1,4 +1,6 @@
 import base64
+import requests
+import json
 from io import BytesIO
 import os
 from django.conf import settings
@@ -52,6 +54,52 @@ def generate_sine_wave(duration, frequency, sample_rate=44100):
     return scaled_data
 
 ##############################################################################################################
+
+####거래량 순위####
+url = "https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/volume-rank?FID_COND_MRKT_DIV_CODE=J&FID_COND_SCR_DIV_CODE=20171&FID_INPUT_ISCD=0002&FID_DIV_CLS_CODE=0&FID_BLNG_CLS_CODE=0&FID_TRGT_CLS_CODE=111111111&FID_TRGT_EXLS_CLS_CODE=000000&FID_INPUT_PRICE_1=0&FID_INPUT_PRICE_2=0&FID_VOL_CNT=0&FID_INPUT_DATE_1=0"
+
+f_url = "https://openapi.koreainvestment.com:9443/uapi/overseas-price/v1/quotations/inquire-time-itemchartprice?AUTH=&EXCD=NAS&SYMB={symbol}&NMIN=5&PINC=1&NEXT=&NREC=120&FILL=&KEYB="
+
+payload = {}
+
+f_payload = ""
+
+headers = {
+  'content-type': 'application/json',
+  'authorization' : broker.access_token,
+#   'authorization': 'Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJ0b2tlbiIsImF1ZCI6IjQ2M2I2MjQyLTYzNzItNGZjNS04M2I2LWZhNjExNTQwOTFmOCIsImlzcyI6InVub2d3IiwiZXhwIjoxNjkxNzkxMTM5LCJpYXQiOjE2OTE3MDQ3MzksImp0aSI6IlBTd0dhNndIZERlTnRidk4ycUpFMWczMHg0OThtbkhoMUE2ViJ9.ZWTFzj2V-HbhyTMwUZohbFMxpd2Xr3CTAOdNTYlJGPDKAiQfKT5XaZp90noi1OZ0IIMTRHIxnpGsbWJxf7xPsg',
+  'appkey': key,
+  'appsecret': secret,
+  'tr_id': 'FHPST01710000',
+  'custtype': 'P'
+}
+@swagger_auto_schema(
+    method='get',
+    operation_id='거래량 순위(50개)',
+    operation_description='거래량 순위(50개)',
+    tags=['주식 데이터']
+)
+@api_view(['GET'])
+@authentication_classes([SessionAuthentication,BasicAuthentication])
+@permission_classes([permissions.AllowAny])
+def transaction_rank(request):
+    response = requests.get(url, headers=headers)  # Use GET request
+    response_data = response.json()  # Parse JSON response
+
+    transaction_data_list = []
+
+    for item in response_data['output']:
+        data = {
+            '종목명': item['hts_kor_isnm'],
+            '거래량 순위': item['data_rank'],
+            '현재가': item['stck_prpr'],
+            '전일 대비율': item['prdy_ctrt'],
+            '누적 거래량': item['acml_vol'],
+        }
+        transaction_data_list.append(data)
+
+    
+    return Response({'거래량 순위': transaction_data_list})
 
 #그냥 현재가
 @swagger_auto_schema(
@@ -367,6 +415,54 @@ def minute_data(request):
     lista = substitution(mx,mn,chart)
     return JsonResponse({'data': data, 'lista': lista}, safe=False)
 
+####해외 분봉####
+
+@swagger_auto_schema(
+    method='get',
+    operation_id='(해외)분 별 데이터 조회',
+    operation_description='현재 시간 기준 2시간전부터의 1분단위 데이터 입니다',
+    tags=['(해외)주식 데이터'],
+    manual_parameters=[
+        openapi.Parameter('symbol', in_=openapi.IN_QUERY, description='종목코드', type=openapi.TYPE_STRING),
+    ],
+)
+@api_view(['GET'])
+@authentication_classes([SessionAuthentication,BasicAuthentication])
+@permission_classes([permissions.AllowAny])
+def f_minute_data(request):
+    symbol = request.GET.get('symbol')
+    print(symbol)
+    headers = {
+    'content-type': 'application/json',
+    'authorization' : broker.access_token,
+    'appkey': key,
+    'appsecret': secret,
+    'tr_id': 'HHDFS76950200',
+    'custtype': 'P'
+}
+    f_url = "https://openapi.koreainvestment.com:9443/uapi/overseas-price/v1/quotations/inquire-time-itemchartprice?AUTH=&EXCD=NAS&SYMB={}&NMIN=1&PINC=0&NEXT=&NREC=120&FILL=&KEYB=".format(symbol)
+    response = requests.request("GET", f_url, headers=headers, data=f_payload)
+    print(f_url)
+    response_data = response.json() 
+    daily_price = response_data['output2']
+    chart= [] 
+    data= []
+    mx = 0 ; mn = 0
+    for dp in reversed(daily_price):
+        chart_data = {
+            '한국기준일자': dp['kymd'],
+            '한국기준시간': dp['khms'],
+            '종가': dp['last'],
+        }
+        print(chart_data)
+        chart.append(float(dp['last']))
+        data.append(chart_data)
+        mx = max(mx,float(dp['high']))
+        mn = min(mn,float(dp['low']))
+    lista = substitution(mx,mn,chart)
+    return JsonResponse({'data': data, 'lista': lista}, safe=False)
+
+
 @swagger_auto_schema(
     method='get',
     operation_id='(여러번)분 별 데이터 조회',
@@ -498,7 +594,7 @@ def my_stocks(request):
     method='post',
     operation_id='매도',
     operation_description='매도하기',
-    tags=['매수/매도'],
+    tags=['매수/매도/좋아요'],
     request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT,
         properties={
@@ -554,7 +650,7 @@ def sell(request):
     method='post',
     operation_id='매수',
     operation_description='매수하기',
-    tags=['매수/매도'],
+    tags=['매수/매도/좋아요'],
     request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT,
         properties={
@@ -614,3 +710,33 @@ def buy(request):
     user_stock_data = UserStockSerializer(user_stock).data
     record_data = RecordSerializer(record).data
     return Response({"message": "구매완료","stock": stock_data,"user_stock": user_stock_data, "record": record_data}, status=200)
+
+####좋아요####
+
+@swagger_auto_schema(
+    method='post',
+    operation_id='찜(좋아요) 기능',
+    operation_description='종목 이름을 넣으세요',
+    tags=['매수/매도/좋아요'],
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'stock_name': openapi.Schema(type=openapi.TYPE_STRING),
+        },
+        required=['stock_name']
+    )
+)
+@api_view(['POST'])
+@authentication_classes([SessionAuthentication,BasicAuthentication])
+@permission_classes([permissions.AllowAny])
+def like_stock(request):
+    stock_name = request.data.get('stock_name')
+    try:
+        stock = Stock.objects.get(name=stock_name)
+    except Stock.DoesNotExist:
+        return Response(status=404)
+
+    stock.likes += 1
+    stock.save()
+
+    return Response({'message': '찜 완료'})
