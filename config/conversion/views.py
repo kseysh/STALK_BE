@@ -57,7 +57,7 @@ def speech_recognition(request):
 
     # 음성 파일 받기 (request.FILES를 통해 업로드한 음성파일을 받음)
     audio_file = request.data.get('audio')
-    print(audio)
+    print(audio_file)
     audio_binary = base64.b64decode(audio_file)
     # 업로드된 음성 파일을 wav 형식으로 변환
     audio_data = AudioSegment.from_file(io.BytesIO(audio_binary))

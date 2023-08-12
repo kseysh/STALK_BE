@@ -4,6 +4,10 @@ WORKDIR /usr/src/app
 
 COPY requirements.txt .
 
+ENV FFMPEG_PATH /usr/bin/ffmpeg
+
+RUN export PATH=$PATH:$FFMPEG_PATH
+
 RUN pip install -r requirements.txt
 
 COPY . .
