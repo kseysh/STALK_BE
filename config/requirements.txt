@@ -15,7 +15,6 @@ djangorestframework==3.14.0
 djangorestframework-simplejwt==5.2.2
 drf-yasg==1.21.7
 exceptiongroup==1.1.2
-ffmpeg==1.4
 gunicorn==21.2.0
 h11==0.14.0
 idna==3.4
