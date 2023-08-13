@@ -43,7 +43,6 @@ INSTALLED_APPS = [
     # my app
     'accounts',
     'sonification',
-    'conversion',
     'news',
 
     # third party app
