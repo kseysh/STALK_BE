@@ -1,22 +1,27 @@
 import requests
-from io import BytesIO
-import numpy as np
-from scipy.io import wavfile
 import mojito
-from django.http import HttpResponse, JsonResponse
-from rest_framework.decorators import api_view
-from .models import Stock, Record, UserStock
-from accounts.models import User
+import numpy as np
+
 from rest_framework.response import Response
-from .serializers import StockSerializer, RecordSerializer, UserStockSerializer
-from drf_yasg.utils import swagger_auto_schema
-from drf_yasg import openapi
+from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.authentication import SessionAuthentication, BasicAuthentication
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework import permissions 
+from rest_framework_simplejwt.authentication import JWTAuthentication
+
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg.openapi import Schema, TYPE_ARRAY, TYPE_NUMBER
+
+from io import BytesIO
+from scipy.io import wavfile
+from django.http import HttpResponse, JsonResponse
+from .serializers import StockSerializer, RecordSerializer, UserStockSerializer
+
+from accounts.models import User
+from .models import Stock, Record, UserStock
 
 ##한국투자증권 keys
 f = open("./koreainvestment.key")
@@ -957,4 +962,18 @@ def data_to_sound(request):
     response['Content-Disposition'] = 'attachment; filename="output.wav"'
     response.write(wav_bytes)
     return response
+
+
+class CheckIsLike(APIView): # 이게 안되면 check_jwt_user를 통해 user정보를 받아서 user_id를 사용하기
+    stock_name= openapi.Parameter('stock_name', openapi.IN_QUERY, description='stock_name', required=True, type=openapi.TYPE_STRING)
+    @swagger_auto_schema(tags=['좋아요가 눌려져 있는 주식인지 확인하는 기능'],manual_parameters=[stock_name], responses={200: 'Success'})
+    def get(request):
+        user, _ = JWTAuthentication().authenticate(request) 
+        stock_name = request.GET.get("stock_name")
+        stock = Stock.objects.get(stock_name=stock_name)
+        if user in stock.liked_user.all():
+            return Response({'message': True}, status=200)
+        else:
+            return Response({'message': False}, status=200)
+        
 
