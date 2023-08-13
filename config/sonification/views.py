@@ -88,7 +88,7 @@ def transaction_rank(request):
             '거래량 순위': item['data_rank'],
             '현재가': item['stck_prpr'],
             '전일 대비율': item['prdy_ctrt'],
-            '누적 거래량': item['acml_vol'],
+            '누적 거래량': item['acml_vol'],# 1일 거래량 입니다
         }
         transaction_data_list.append(data)
     return Response({'거래량 순위': transaction_data_list})
