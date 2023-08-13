@@ -742,16 +742,26 @@ def f_minute_data(request):
 @api_view(['GET'])
 @authentication_classes([SessionAuthentication,BasicAuthentication])
 @permission_classes([permissions.AllowAny])
-def my_stocks(request):
+def user_info(request):
     try:
         user = request.user
         user_records = user.records.all()
+        user_liked_stocks = Stock.objects.filter(liked_user=user)
+        liked_stock_names = [stock.name for stock in user_liked_stocks]
         user_stock = UserStock.objects.get(user=user)
         user_stock_data = UserStockSerializer(user_stock).data
         record_data = RecordSerializer(user_records, many=True).data
-        return Response({'user_stock_data' : user_stock_data , 'record_data' : record_data})
+
+        user_data = {
+            'username': user.username,
+            'user_nickname': user.user_nickname,
+            'user_property': user.user_property,
+        }
+        
+        return Response({'유저정보': user_data,'찜한목록': liked_stock_names,'모의투자한 종목' : user_stock_data , '거래 기록' : record_data})
+    
     except User.DoesNotExist:
-        return Response({'error': '없는 유저입니다'}, status=404)
+        return Response({'error': '로그인 하세요.'}, status=404)
 
 ####매도####
 @swagger_auto_schema(
@@ -904,7 +914,6 @@ def like_stock(request):
     user.liked_stock.add(user)  
     stock.likes += 1
     stock.save()
-    s = StockSerializer
 
     return Response({'message': '찜 완료'})
 

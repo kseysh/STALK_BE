@@ -156,11 +156,3 @@ def check_jwt_user(request):
 
             return res
         raise jwt.exceptions.InvalidTokenError
-
-
-def post(request):
-    user = User.objects.get(id=1)
-    print(user)
-    s = UserSerializer(user)
-    print(s.data)
-    return Response(s.data,status=200)
