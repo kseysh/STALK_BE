@@ -1,9 +1,5 @@
-import base64
 import requests
-import json
 from io import BytesIO
-import os
-from django.conf import settings
 import numpy as np
 from scipy.io import wavfile
 import mojito
@@ -15,15 +11,14 @@ from rest_framework.response import Response
 from .serializers import StockSerializer, RecordSerializer, UserStockSerializer
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.authentication import SessionAuthentication, BasicAuthentication
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework import permissions 
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg.openapi import Schema, TYPE_ARRAY, TYPE_NUMBER
-from rest_framework.parsers import MultiPartParser
 
+##한국투자증권 keys
 f = open("./koreainvestment.key")
 lines = f.readlines()
 key = lines[0].strip()
@@ -53,26 +48,13 @@ def generate_sine_wave(duration, frequency, sample_rate=44100):
     scaled_data = (data * 32767).astype(np.int16)
     return scaled_data
 
-##############################################################################################################
-
-####거래량 순위####
-url = "https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/volume-rank?FID_COND_MRKT_DIV_CODE=J&FID_COND_SCR_DIV_CODE=20171&FID_INPUT_ISCD=0002&FID_DIV_CLS_CODE=0&FID_BLNG_CLS_CODE=0&FID_TRGT_CLS_CODE=111111111&FID_TRGT_EXLS_CLS_CODE=000000&FID_INPUT_PRICE_1=0&FID_INPUT_PRICE_2=0&FID_VOL_CNT=0&FID_INPUT_DATE_1=0"
-
-f_url = "https://openapi.koreainvestment.com:9443/uapi/overseas-price/v1/quotations/inquire-time-itemchartprice?AUTH=&EXCD=NAS&SYMB={symbol}&NMIN=5&PINC=1&NEXT=&NREC=120&FILL=&KEYB="
-
+#실전모의계좌용 api 공용
 payload = {}
-
 f_payload = ""
 
-headers = {
-  'content-type': 'application/json',
-  'authorization' : broker.access_token,
-#   'authorization': 'Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJ0b2tlbiIsImF1ZCI6IjQ2M2I2MjQyLTYzNzItNGZjNS04M2I2LWZhNjExNTQwOTFmOCIsImlzcyI6InVub2d3IiwiZXhwIjoxNjkxNzkxMTM5LCJpYXQiOjE2OTE3MDQ3MzksImp0aSI6IlBTd0dhNndIZERlTnRidk4ycUpFMWczMHg0OThtbkhoMUE2ViJ9.ZWTFzj2V-HbhyTMwUZohbFMxpd2Xr3CTAOdNTYlJGPDKAiQfKT5XaZp90noi1OZ0IIMTRHIxnpGsbWJxf7xPsg',
-  'appkey': key,
-  'appsecret': secret,
-  'tr_id': 'FHPST01710000',
-  'custtype': 'P'
-}
+##################DRF####################
+
+####거래량 순위####
 @swagger_auto_schema(
     method='get',
     operation_id='거래량 순위(50개)',
@@ -83,11 +65,18 @@ headers = {
 @authentication_classes([SessionAuthentication,BasicAuthentication])
 @permission_classes([permissions.AllowAny])
 def transaction_rank(request):
-    response = requests.get(url, headers=headers)  # Use GET request
-    response_data = response.json()  # Parse JSON response
-
+    headers = {
+        'content-type': 'application/json',
+        'authorization' : broker.access_token,
+        'appkey': key,
+        'appsecret': secret,
+        'tr_id': 'FHPST01710000',
+        'custtype': 'P'
+    }
+    url = "https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/volume-rank?FID_COND_MRKT_DIV_CODE=J&FID_COND_SCR_DIV_CODE=20171&FID_INPUT_ISCD=0002&FID_DIV_CLS_CODE=0&FID_BLNG_CLS_CODE=0&FID_TRGT_CLS_CODE=111111111&FID_TRGT_EXLS_CLS_CODE=000000&FID_INPUT_PRICE_1=0&FID_INPUT_PRICE_2=0&FID_VOL_CNT=0&FID_INPUT_DATE_1=0"
+    response = requests.get(url, headers=headers)
+    response_data = response.json() 
     transaction_data_list = []
-
     for item in response_data['output']:
         data = {
             '종목명': item['hts_kor_isnm'],
@@ -97,11 +86,9 @@ def transaction_rank(request):
             '누적 거래량': item['acml_vol'],
         }
         transaction_data_list.append(data)
-
-    
     return Response({'거래량 순위': transaction_data_list})
 
-#그냥 현재가
+####호출기준 현재가####
 @swagger_auto_schema(
     method='get',
     operation_id='현재 주가 확인 및 사용자 투자종목 업데이트',
@@ -111,14 +98,11 @@ def transaction_rank(request):
         openapi.Parameter('symbol', in_=openapi.IN_QUERY, description='종목코드', type=openapi.TYPE_STRING),
     ],
 )
-
 @api_view(['GET'])
 @authentication_classes([SessionAuthentication,BasicAuthentication])
 @permission_classes([permissions.AllowAny])
 def now_data(request):
     symbol = request.GET.get('symbol')
-    if not symbol:
-        return JsonResponse({'error': 'Symbol not provided'}, status=400)
     resp = broker.fetch_price(symbol)
     chart_data = { 
         '전일대비부호': resp['output']['prdy_vrss_sign'],
@@ -138,13 +122,12 @@ def now_data(request):
                 user_stock.profit_loss = user_stock.price - now_stock_price
                 user_stock.now_price = now_stock_price
                 user_stock.rate_profit_loss=(now_stock_price-user_stock.price)/user_stock.price*100
-
                 user_stock.save()
     else:
         pass
     return JsonResponse({'chart_data': chart_data}, safe=True)
 
-##해외 현재상태 ##
+####해외 호출기준 데이터 ####
 @swagger_auto_schema(
     method='get',
     operation_id='(해외)현재 주가 확인 및 사용자 투자종목 업데이트',
@@ -189,7 +172,7 @@ def f_now_data(request):
         return JsonResponse({'chart_data': chart_data}, safe=True)
     return JsonResponse({'chart_data': chart_data}, safe=True)
 
-####일봉####
+####일 데이터####
 @swagger_auto_schema(
     method='get',
     operation_id='날짜 별 데이터 조회',
@@ -210,14 +193,14 @@ def day_data(request):
     end = request.GET.get('end') 
     print(symbol)
     resp = broker.fetch_ohlcv(
-        start_day=begin, #YYYYMMDD 형식 지킬 것
+        start_day=begin, #YYYYMMDD 
         end_day=end,
-        symbol=symbol, #종목
+        symbol=symbol, 
         timeframe='D',  
         adj_price=True
     )
     daily_price = resp['output2']
-    jm = resp['output1']['hts_kor_isnm']
+    jm = resp['output1']['hts_kor_isnm'] #종목명
     print(jm)
     chart= []
     data=[]
@@ -236,7 +219,6 @@ def day_data(request):
     return JsonResponse({'data': data, 'lista': lista}, safe=True)
 
 ####업종 날짜별####
-
 @swagger_auto_schema(
     method='get',
     operation_id='날짜 별 데이터 조회+ 현재 업종 데이터 가능',
@@ -255,18 +237,15 @@ def a_day_data(request):
     symbol = request.GET.get('symbol')
     start = request.GET.get('start')
     end = request.GET.get('end')
-    print(symbol)
-    print(start)
-    print(end)
     headers = {
-    'content-type': 'application/json',
-    'authorization' : broker.access_token,
-    'appkey': key,
-    'appsecret': secret,
-    'tr_id': 'FHKUP03500100',
-}
+        'content-type': 'application/json',
+        'authorization' : broker.access_token,
+        'appkey': key,
+        'appsecret': secret,
+        'tr_id': 'FHKUP03500100'
+    }
     url = "https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-daily-indexchartprice?fid_cond_mrkt_div_code=U&fid_input_iscd={}&fid_input_date_1={}&fid_input_date_2={}&fid_period_div_code=D".format(symbol, start, end)
-    print(url)
+
     response = requests.request("GET", url, headers=headers, data=payload)
     response_data = response.json() 
     jm = response_data['output1']['hts_kor_isnm']
@@ -282,7 +261,6 @@ def a_day_data(request):
             '호출시간 현재가': now_jm,
             '해당일 업종 현재가': dp['bstp_nmix_prpr'],
         }
-        print(chart_data)
         chart.append(float(dp['bstp_nmix_prpr']))
         data.append(chart_data)
         mx = max(mx,float(dp['bstp_nmix_hgpr']))
@@ -290,8 +268,7 @@ def a_day_data(request):
     lista = substitution(mx,mn,chart)
     return JsonResponse({'data': data, 'lista': lista}, safe=False)
 
-####나스닥 일별####
-
+####해외 업종 날짜별####
 @swagger_auto_schema(
     method='get',
     operation_id='(해외)날짜 별 데이터 조회+ 현재 업종 데이터 가능',
@@ -311,18 +288,15 @@ def f_a_day_data(request):
     start = request.GET.get('start')
     end = request.GET.get('end')
     payload=""
-    print(symbol)
-    print(start)
-    print(end)
     headers = {
-    'content-type': 'application/json',
-    'authorization' : broker.access_token,
-    'appkey': key,
-    'appsecret': secret,
-    'tr_id': 'FHKST03030100',
-}
+        'content-type': 'application/json',
+        'authorization' : broker.access_token,
+        'appkey': key,
+        'appsecret': secret,
+        'tr_id': 'FHKST03030100',
+    }
     url = "https://openapi.koreainvestment.com:9443/uapi/overseas-price/v1/quotations/inquire-daily-chartprice?FID_COND_MRKT_DIV_CODE=N&FID_INPUT_ISCD=QQQ&FID_INPUT_DATE_1=20220531&FID_INPUT_DATE_2=20220731&FID_PERIOD_DIV_CODE=D".format(symbol, start, end)
-    print(url)
+
     response = requests.request("GET", url, headers=headers, data=payload)
     response_data = response.json() 
     jm = response_data['output1']['hts_kor_isnm']
@@ -346,8 +320,7 @@ def f_a_day_data(request):
     lista = substitution(mx,mn,chart)
     return JsonResponse({'data': data, 'lista': lista}, safe=False)
 
-####해외 일별 ####
-
+####해외 종목 데이터 날짜별 ####
 @swagger_auto_schema(
     method='get',
     operation_id='(해외)날짜 별 데이터 조회',
@@ -368,7 +341,7 @@ def f_day_data(request):
     api_key=key,
     api_secret=secret,
     acc_no=acc_no,
-    exchange="나스닥",
+    exchange="나스닥",  ##나스닥으로 설정
     mock=True
     )
     resp = broker.fetch_ohlcv_overesea(
@@ -393,8 +366,9 @@ def f_day_data(request):
     lista = substitution(mx,mn,chart)
     return JsonResponse({'data': data, 'lista': lista}, safe=True)
 
-####주봉####
+################################WEEK#####################################
 
+####국내 종목 주 데이터####
 @swagger_auto_schema(
     method='get',
     operation_id='주 별 데이터 조회',
@@ -413,19 +387,15 @@ def week_data(request):
     symbol = request.GET.get('symbol')
     begin = request.GET.get('begin') 
     end = request.GET.get('end') 
-    print(symbol)
     resp = broker.fetch_ohlcv(
-        start_day=begin, #YYYYMMDD 형식 지킬 것
+        start_day=begin, #YYYYMMDD
         end_day=end,
-        symbol=symbol, #종목
+        symbol=symbol, 
         timeframe='W',  
         adj_price=True
     )
-    print(resp)
     daily_price = resp['output2']
-    print(daily_price)
-    jm = resp['output1']['hts_kor_isnm'] #종목 ㅋㅋ
-    print(jm)
+    jm = resp['output1']['hts_kor_isnm']
     chart= []
     data=[]
     mx = 0 ; mn = 0
@@ -442,8 +412,7 @@ def week_data(request):
     lista = substitution(mx,mn,chart)
     return JsonResponse({'data': data, 'lista': lista}, safe=True)
 
-####주 데이터 업종####
-
+####국내 주 데이터 업종####
 @swagger_auto_schema(
     method='get',
     operation_id='날짜 별 데이터 조회+ 현재 업종 데이터 가능',
@@ -462,18 +431,15 @@ def a_week_data(request):
     symbol = request.GET.get('symbol')
     start = request.GET.get('start')
     end = request.GET.get('end')
-    print(symbol)
-    print(start)
-    print(end)
     headers = {
-    'content-type': 'application/json',
-    'authorization' : broker.access_token,
-    'appkey': key,
-    'appsecret': secret,
-    'tr_id': 'FHKUP03500100',
-}
+        'content-type': 'application/json',
+        'authorization' : broker.access_token,
+        'appkey': key,
+        'appsecret': secret,
+        'tr_id': 'FHKUP03500100',
+    }
     url = "https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-daily-indexchartprice?fid_cond_mrkt_div_code=U&fid_input_iscd={}&fid_input_date_1={}&fid_input_date_2={}&fid_period_div_code=W".format(symbol, start, end)
-    print(url)
+
     response = requests.request("GET", url, headers=headers, data=payload)
     response_data = response.json() 
     jm = response_data['output1']['hts_kor_isnm']
@@ -489,7 +455,6 @@ def a_week_data(request):
             '호출시간 현재가': now_jm,
             '해당일 업종 현재가': dp['bstp_nmix_prpr'],
         }
-        print(chart_data)
         chart.append(float(dp['bstp_nmix_prpr']))
         data.append(chart_data)
         mx = max(mx,float(dp['bstp_nmix_hgpr']))
@@ -497,7 +462,7 @@ def a_week_data(request):
     lista = substitution(mx,mn,chart)
     return JsonResponse({'data': data, 'lista': lista}, safe=False)
 
-#### 주 나스닥 해외####
+#### 주 해외 업종####
 @swagger_auto_schema(
     method='get',
     operation_id='(해외)주 별 데이터 조회+ 현재 업종 데이터 가능',
@@ -517,18 +482,15 @@ def f_a_week_data(request):
     start = request.GET.get('start')
     end = request.GET.get('end')
     payload=""
-    print(symbol)
-    print(start)
-    print(end)
     headers = {
-    'content-type': 'application/json',
-    'authorization' : broker.access_token,
-    'appkey': key,
-    'appsecret': secret,
-    'tr_id': 'FHKST03030100'
-}
+        'content-type': 'application/json',
+        'authorization' : broker.access_token,
+        'appkey': key,
+        'appsecret': secret,
+        'tr_id': 'FHKST03030100'
+    }
     url = "https://openapi.koreainvestment.com:9443/uapi/overseas-price/v1/quotations/inquire-daily-chartprice?FID_COND_MRKT_DIV_CODE=N&FID_INPUT_ISCD={}&FID_INPUT_DATE_1={}&FID_INPUT_DATE_2={}&FID_PERIOD_DIV_CODE=W".format(symbol, start, end)
-    print(url)
+
     response = requests.request("GET", url, headers=headers, data=payload)
     response_data = response.json() 
     jm = response_data['output1']['hts_kor_isnm']
@@ -552,9 +514,7 @@ def f_a_week_data(request):
     lista = substitution(mx,mn,chart)
     return JsonResponse({'data': data, 'lista': lista}, safe=False)
 
-
-####주 데이터 해외####
-
+####주 단위 종목 데이터 해외####
 @swagger_auto_schema(
     method='get',
     operation_id='(해외)주 별 데이터 조회',
@@ -600,13 +560,16 @@ def f_week_data(request):
     lista = substitution(mx,mn,chart)
     return JsonResponse({'data': data, 'lista': lista}, safe=True)
 
-####분봉####
+#################################MINUTE#################################
+
+####국내 종목 분 데이터####
 @swagger_auto_schema(
     method='get',
-    operation_id='분 별 데이터 조회',
-    operation_description='api호출한 시간 기준 30분전 부터의 데이터',
+    operation_id='(여러번)분 별 데이터 조회',
+    operation_description='(여러번)api호출한 시간 기준 30분전 부터의 데이터',
     tags=['주식 데이터'],
     manual_parameters=[
+        openapi.Parameter('count', in_=openapi.IN_QUERY, description='몇 번 호출', type=openapi.TYPE_STRING),
         openapi.Parameter('symbol', in_=openapi.IN_QUERY, description='종목코드', type=openapi.TYPE_STRING),
         openapi.Parameter('end', in_=openapi.IN_QUERY, description='종료시간(HHMMSS 형식)', type=openapi.TYPE_STRING)
     ],
@@ -615,29 +578,31 @@ def f_week_data(request):
 @authentication_classes([SessionAuthentication,BasicAuthentication])
 @permission_classes([permissions.AllowAny])
 def minute_data(request):
-    print(request)
+    count = request.GET.get('count')
     symbol = request.GET.get('symbol')
     end = request.GET.get('end')
-    result = broker._fetch_today_1m_ohlcv(symbol,end)
-    daily_price = result['output2']
-    jm = result['output1']['hts_kor_isnm'] ##종목
     chart= [] 
     data= []
     mx = 0 ; mn = 0
-    for dp in reversed(daily_price):
-        chart_data = {
-            "종목": jm,
-            '날짜': dp['stck_bsop_date'],
-            '현재가': dp['stck_prpr'],
-        }
-        chart.append(int(dp['stck_prpr']))
-        data.append(chart_data)
-        mx = max(mx,int(dp['stck_hgpr']))
-        mn = min(mn,int(dp['stck_lwpr']))
+    for i in range (int(count)):
+        here_end = str(int(end) - 30*(i))
+        result = broker._fetch_today_1m_ohlcv(symbol,here_end)
+        daily_price = result['output2']
+        jm = result['output1']['hts_kor_isnm'] 
+        for dp in reversed(daily_price):
+            chart_data = {
+                "종목": jm,
+                '날짜': dp['stck_bsop_date'],
+                '현재가': dp['stck_prpr'],
+            }
+            chart.append(int(dp['stck_prpr']))
+            data.append(chart_data)
+    mx = max(mx,int(dp['stck_hgpr']))
+    mn = min(mn,int(dp['stck_lwpr']))
     lista = substitution(mx,mn,chart)
     return JsonResponse({'data': data, 'lista': lista}, safe=False)
 
-####업종 분봉####
+####국내 업종 분 데이터####
 @swagger_auto_schema(
     method='get',
     operation_id='(업종)분 별 데이터 조회',
@@ -674,8 +639,7 @@ def a_minute_data(request):
     lista = substitution(mx,mn,chart)
     return JsonResponse({'data': data, 'lista': lista}, safe=False)
 
-####해외 업종 분봉####
-
+####해외 업종 분 데이터####
 @swagger_auto_schema(
     method='get',
     operation_id='(해외)분 별 데이터 조회',
@@ -691,23 +655,20 @@ def a_minute_data(request):
 def f_a_minute_data(request):
     symbol = request.GET.get('symbol')
     payload=""
-    print(symbol)
     headers = {
-    'content-type': 'application/json',
-    'authorization' : broker.access_token,
-    'appkey': key,
-    'appsecret': secret,
-    'tr_id': 'FHKST03030200',
-    'custtype': 'P'
-}
+        'content-type': 'application/json',
+        'authorization' : broker.access_token,
+        'appkey': key,
+        'appsecret': secret,
+        'tr_id': 'FHKST03030200',
+        'custtype': 'P'
+    }
     url = "https://openapi.koreainvestment.com:9443/uapi/overseas-price/v1/quotations/inquire-time-indexchartprice?FID_COND_MRKT_DIV_CODE=N&FID_INPUT_ISCD={}&FID_HOUR_CLS_CODE=0&FID_PW_DATA_INCU_YN=Y".format(symbol)
-    print(url)
+
     response = requests.request("GET", url, headers=headers, data=payload)
     response_data = response.json() 
-    # print(response_data)
     jm = response_data['output1']['hts_kor_isnm']
     daily_price = response_data['output2']
-    print(daily_price)
     chart= []
     data= []
     mx = 0 ; mn = 0
@@ -725,8 +686,7 @@ def f_a_minute_data(request):
     lista = substitution(mx,mn,chart)
     return JsonResponse({'data': data, 'lista': lista}, safe=False)
 
-####해외 분봉####
-
+####해외 종목 분 데이터####
 @swagger_auto_schema(
     method='get',
     operation_id='(해외)분 별 데이터 조회',
@@ -741,18 +701,17 @@ def f_a_minute_data(request):
 @permission_classes([permissions.AllowAny])
 def f_minute_data(request):
     symbol = request.GET.get('symbol')
-    print(symbol)
     headers = {
-    'content-type': 'application/json',
-    'authorization' : broker.access_token,
-    'appkey': key,
-    'appsecret': secret,
-    'tr_id': 'HHDFS76950200',
-    'custtype': 'P'
-}
+        'content-type': 'application/json',
+        'authorization' : broker.access_token,
+        'appkey': key,
+        'appsecret': secret,
+        'tr_id': 'HHDFS76950200',
+        'custtype': 'P'
+    }
     f_url = "https://openapi.koreainvestment.com:9443/uapi/overseas-price/v1/quotations/inquire-time-itemchartprice?AUTH=&EXCD=NAS&SYMB={}&NMIN=1&PINC=0&NEXT=&NREC=120&FILL=&KEYB=".format(symbol)
+
     response = requests.request("GET", f_url, headers=headers, data=f_payload)
-    print(f_url)
     response_data = response.json() 
     daily_price = response_data['output2']
     chart= [] 
@@ -764,7 +723,6 @@ def f_minute_data(request):
             '한국기준시간': dp['khms'],
             '종가': dp['last'],
         }
-        print(chart_data)
         chart.append(float(dp['last']))
         data.append(chart_data)
         mx = max(mx,float(dp['high']))
@@ -772,114 +730,9 @@ def f_minute_data(request):
     lista = substitution(mx,mn,chart)
     return JsonResponse({'data': data, 'lista': lista}, safe=False)
 
+###############################TRANSACTION#################################
 
-@swagger_auto_schema(
-    method='get',
-    operation_id='(여러번)분 별 데이터 조회',
-    operation_description='(여러번)api호출한 시간 기준 30분전 부터의 데이터',
-    tags=['주식 데이터'],
-    manual_parameters=[
-        openapi.Parameter('count', in_=openapi.IN_QUERY, description='몇 번 호출', type=openapi.TYPE_STRING),
-        openapi.Parameter('symbol', in_=openapi.IN_QUERY, description='종목코드', type=openapi.TYPE_STRING),
-        openapi.Parameter('end', in_=openapi.IN_QUERY, description='종료시간(HHMMSS 형식)', type=openapi.TYPE_STRING)
-    ],
-)
-@api_view(['GET'])
-@authentication_classes([SessionAuthentication,BasicAuthentication])
-@permission_classes([permissions.AllowAny])
-def repeat_minute_data(request):
-    count = request.GET.get('count')
-    symbol = request.GET.get('symbol')
-    end = request.GET.get('end')
-    chart= [] 
-    data= []
-    mx = 0 ; mn = 0
-    for i in range (int(count)):
-        here_end = str(int(end) - 30*(i))
-        result = broker._fetch_today_1m_ohlcv(symbol,here_end)
-        print(result)
-        daily_price = result['output2']
-        jm = result['output1']['hts_kor_isnm'] ##종목 ㅋㅋ
-        for dp in reversed(daily_price):
-            chart_data = {
-                "종목": jm,
-                '날짜': dp['stck_bsop_date'],
-                '현재가': dp['stck_prpr'],
-            }
-            chart.append(int(dp['stck_prpr']))
-            data.append(chart_data)
-    mx = max(mx,int(dp['stck_hgpr']))
-    mn = min(mn,int(dp['stck_lwpr']))
-    lista = substitution(mx,mn,chart)
-    return JsonResponse({'data': data, 'lista': lista}, safe=False)
-
-
-####차트 음향화####
-@swagger_auto_schema(
-    method='post',
-    operation_id='현재가 데이터 음향화',
-    operation_description='데이터를 소리로 변환',
-    tags=['음성'],
-    request_body=Schema(
-        type='object', 
-        properties={
-            'lista': Schema(
-                type=TYPE_ARRAY,
-                items=Schema(
-                    type=TYPE_NUMBER,
-                ),
-            ),
-        },
-        required=['lista'],
-    ),
-)
-@api_view(['POST'])
-@authentication_classes([SessionAuthentication, BasicAuthentication])
-@permission_classes([permissions.AllowAny])
-def data_to_sound(request):
-    data = request.data.get('lista')
-    duration = 0.5
-    result = generate_sine_wave(0.1, 0)  # 사인파들을 numpy.ndarray 형태로 받아올 빈 numpy.ndarray
-    for i in data:
-        sine = generate_sine_wave(duration, i)
-        result = np.concatenate((result, sine))
-
-    wav_stream = BytesIO()
-    wavfile.write(wav_stream, 44100, result)
-    wav_bytes = wav_stream.getvalue()
-
-    # 음성파일을 Response 객체로 전달하며, content_type은 'audio/wav'로 설정
-    return HttpResponse(wav_bytes, content_type='audio/wav')
-# @swagger_auto_schema(
-#     method='post',
-#     operation_id='data_to_sound',
-#     operation_description='데이터를 소리로 변환',
-#     tags=['sound'],
-#     request_body=Schema(
-#         type=TYPE_ARRAY,
-#         items=Schema(
-#             type=TYPE_NUMBER,
-#         ),
-#     ),
-# )
-# @api_view(['POST'])
-# @authentication_classes([SessionAuthentication, BasicAuthentication])
-# @permission_classes([permissions.AllowAny])
-# def data_to_sound(request):
-#     data = request.data.get('lista')
-#     duration = 0.5
-#     result = generate_sine_wave(0.1,0) # 사인파들을 numpy.ndarray 형태로 받아올 빈 numpy.ndarray
-#     for i in data:  # 실험용 , 주가데이터를 알맞게 변환해서 넣어야 함
-#         sine = generate_sine_wave(duration, i) # 사인파로 만들고
-#         result = np.concatenate((result,sine)) # 만든 것들을 result에 합침
-#     wav_stream = BytesIO()
-#     wavfile.write(wav_stream, 44100, result)
-#     response = HttpResponse(wav_stream.getvalue(), content_type='audio/wav')
-#     response['Content-Disposition'] = 'attachment; filename="Sine.wav"'
-#     return response
-
-##############################################################################################################
-
+####유저 정보####
 @swagger_auto_schema(
     method='get',
     operation_id='사용자의 정보 조회',
@@ -900,6 +753,7 @@ def my_stocks(request):
     except User.DoesNotExist:
         return Response({'error': '없는 유저입니다'}, status=404)
 
+####매도####
 @swagger_auto_schema(
     method='post',
     operation_id='매도',
@@ -956,6 +810,7 @@ def sell(request):
     record_data = RecordSerializer(record).data
     return Response({"message": "판매완료","stock": stock_data,"user_stock": user_stock_data, "record": record_data}, status=200)
 
+####매수####
 @swagger_auto_schema(
     method='post',
     operation_id='매수',
@@ -1022,7 +877,6 @@ def buy(request):
     return Response({"message": "구매완료","stock": stock_data,"user_stock": user_stock_data, "record": record_data}, status=200)
 
 ####좋아요####
-
 @swagger_auto_schema(
     method='post',
     operation_id='찜(좋아요) 기능',
@@ -1053,3 +907,45 @@ def like_stock(request):
     s = StockSerializer
 
     return Response({'message': '찜 완료'})
+
+###############################SONIFICATION################################
+
+####차트 음향화####
+@swagger_auto_schema(
+    method='post',
+    operation_id='현재가 데이터 음향화',
+    operation_description='데이터를 소리로 변환',
+    tags=['음성'],
+    request_body=Schema(
+        type='object', 
+        properties={
+            'lista': Schema(
+                type=TYPE_ARRAY,
+                items=Schema(
+                    type=TYPE_NUMBER,
+                ),
+            ),
+        },
+        required=['lista'],
+    ),
+)
+@api_view(['POST'])
+@authentication_classes([SessionAuthentication, BasicAuthentication])
+@permission_classes([permissions.AllowAny])
+def data_to_sound(request):
+    data = request.data.get('lista')
+    duration = 0.5
+    result = generate_sine_wave(0.1, 0)  # 사인파들을 numpy.ndarray 형태로 받아올 빈 numpy.ndarray
+    for i in data:
+        sine = generate_sine_wave(duration, i)
+        result = np.concatenate((result, sine))
+
+    wav_stream = BytesIO()
+    wavfile.write(wav_stream, 44100, result)
+    wav_bytes = wav_stream.getvalue()
+
+    response = HttpResponse(content_type='audio/wav') ##audio 타입 설정
+    response['Content-Disposition'] = 'attachment; filename="output.wav"'
+    response.write(wav_bytes)
+    return response
+
