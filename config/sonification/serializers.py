@@ -4,7 +4,7 @@ from .models import Stock, Record, UserStock
 class StockSerializer(serializers.ModelSerializer):
     class Meta:
         model = Stock
-        fields = ['liked_user']
+        fields = ['id']
 
 
 
