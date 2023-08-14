@@ -996,11 +996,11 @@ def data_to_sound(request):
     return response
 
 
-class CheckIsLike(APIView): # 이게 안되면 check_jwt_user를 통해 user정보를 받아서 user_id를 사용하기
+class CheckIsLike(APIView): 
     stock_name= openapi.Parameter('stock_name', openapi.IN_QUERY, description='stock_name', required=True, type=openapi.TYPE_STRING)
     @swagger_auto_schema(tags=['좋아요가 눌려져 있는 주식인지 확인하는 기능'],manual_parameters=[stock_name], responses={200: 'Success'})
     def get(request):
-        user, _ = JWTAuthentication().authenticate(request) 
+        user, _ = JWTAuthentication().authenticate(request) # 이게 안되면 check_jwt_user를 통해 user정보를 받아서 user_id를 사용하기
         stock_name = request.GET.get("stock_name")
         stock = Stock.objects.get(stock_name=stock_name)
         if user in stock.liked_user.all():

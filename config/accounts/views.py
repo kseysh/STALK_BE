@@ -84,8 +84,8 @@ def kakao_callback(request):
             },
             status=status.HTTP_200_OK,
         )
-        res.set_cookie("accessToken", value=access_token, max_age=None, expires=None, secure=True, samesite=None, httponly=True)
-        res.set_cookie("refreshToken", value=refresh_token, max_age=None, expires=None, secure=True, samesite=None,httponly=True)
+        res.set_cookie("accessToken", value=access_token, max_age=None, expires=None, secure=True, samesite="None", httponly=True)
+        res.set_cookie("refreshToken", value=refresh_token, max_age=None, expires=None, secure=True, samesite="None",httponly=True)
         return res
     except User.DoesNotExist:
         user = User.objects.create_user(username=username)
@@ -108,8 +108,8 @@ def kakao_callback(request):
             },
             status=status.HTTP_200_OK,
         )
-        res.set_cookie("accessToken",  value=access_token, max_age=None, expires=None, secure=True, samesite=None, httponly=True)
-        res.set_cookie("refreshToken",  value=refresh_token, max_age=None, expires=None, secure=True, samesite=None, httponly=True)
+        res.set_cookie("accessToken", value=access_token, max_age=None, expires=None, secure=True, samesite="None", httponly=True)
+        res.set_cookie("refreshToken", value=refresh_token, max_age=None, expires=None, secure=True, samesite="None",httponly=True)
 
         return res
     
@@ -151,8 +151,14 @@ def check_jwt_user(request):
             user = get_object_or_404(User, username=username)
             serializer = UserSerializer(instance=user)
             res = Response(serializer.data, status=status.HTTP_200_OK)
-            res.set_cookie("accessToken", value=access, max_age=None, expires=None, secure=True, samesite=None, httponly=True)
-            res.set_cookie("refreshToken", value=refresh, max_age=None, expires=None, secure=True, samesite=None,httponly=True)
+            res.set_cookie("accessToken", value=access, max_age=None, expires=None, secure=True, samesite="None", httponly=True)
+            res.set_cookie("refreshToken", value=refresh, max_age=None, expires=None, secure=True, samesite="None",httponly=True)
 
             return res
         raise jwt.exceptions.InvalidTokenError
+
+
+def call_temp_user_info(request):
+    user = get_object_or_404(User, id = 1)
+    serializer = UserSerializer(instance=user)
+    return Response(serializer.data, status=status.HTTP_200_OK)

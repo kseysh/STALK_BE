@@ -81,6 +81,7 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django_cookies_samesite.middleware.CookiesSameSite',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -146,10 +147,8 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000',
     'http://127.0.0.1:8000',
-    'http://stalksound.store',
     'https://stalksound.store',
     'https://stalk-login-test.pages.dev',
-    'http://stalk-login-test.pages.dev',
     'http://localhost:8000',
 ]
 
@@ -163,7 +162,9 @@ CSRF_COOKIE_SAMESITE = 'None'
 
 SESSION_COOKIE_SAMESITE = 'None'
 
-CSRF_COOKIE_HTTPONLY = False
+CSRF_COOKIE_HTTPONLY = True
+
+SESSION_COOKIE_HTTPONLY = True
 
 SWAGGER_SETTINGS = {
     'SECURITY_DEFINITIONS': {
