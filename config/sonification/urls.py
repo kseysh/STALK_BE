@@ -26,4 +26,5 @@ urlpatterns = [
     path('buy/', buy, name='buy'),
     path('sell/', sell, name='sell'),
     path('like_stock/', like_stock, name='like_stock'),
+    path('checkislike/',CheckIsLike.as_view()),
 ]
