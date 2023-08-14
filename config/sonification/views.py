@@ -742,4 +742,98 @@ def like_stock(request):
     stock.save()
     s = StockSerializer
 
-    return Response({'message': '찜 완료'})
+###############################SONIFICATION################################
+
+####차트 음향화####
+@swagger_auto_schema(
+    method='post',
+    operation_id='현재가 데이터 음향화',
+    operation_description='데이터를 소리로 변환',
+    tags=['음성'],
+    request_body=Schema(
+        type='object', 
+        properties={
+            'lista': Schema(
+                type=TYPE_ARRAY,
+                items=Schema(
+                    type=TYPE_NUMBER,
+                ),
+            ),
+        },
+        required=['lista'],
+    ),
+)
+@api_view(['POST'])
+@authentication_classes([SessionAuthentication, BasicAuthentication])
+@permission_classes([permissions.AllowAny])
+def data_to_sound(request):
+    data = request.data.get('lista')
+    duration = 0.5
+    result = generate_sine_wave(0.1, 0)  # 사인파들을 numpy.ndarray 형태로 받아올 빈 numpy.ndarray
+    for i in data:
+        sine = generate_sine_wave(duration, i)
+        result = np.concatenate((result, sine))
+
+    wav_stream = BytesIO()
+    wavfile.write(wav_stream, 44100, result)
+    wav_bytes = wav_stream.getvalue()
+
+    response = HttpResponse(content_type='audio/wav') ##audio 타입 설정
+    response['Content-Disposition'] = 'attachment; filename="output.wav"'
+    response.write(wav_bytes)
+    return response
+
+
+class CheckIsLike(APIView): 
+    stock_name= openapi.Parameter('stock_name', openapi.IN_QUERY, description='종목 이름', required=True, type=openapi.TYPE_STRING)
+    @swagger_auto_schema(tags=['좋아요가 눌려져 있는 주식인지 확인하는 기능'],manual_parameters=[stock_name], responses={200: 'Success'})
+    def get(request):
+        # user, _ = JWTAuthentication().authenticate(request) # 이게 안되면 check_jwt_user를 통해 user정보를 받아서 user_id를 사용하기
+        user = User.objects.get(id = 2)
+        stock_name = request.GET.get("stock_name")
+        stock = Stock.objects.get(symbol=stock_name)
+        if user in stock.liked_user.all():
+            return Response({'message': True}, status=200)
+        else:
+            return Response({'message': False}, status=200)
+
+
+@swagger_auto_schema(
+    method='post',
+    operation_id='음성을 텍스트로 변환',
+    operation_description='사용자의 음성을 텍스트로 변환',
+    tags=['음성'],
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT, 
+        properties={
+            'audio': openapi.Schema(
+                type=openapi.TYPE_FILE,
+            ),
+        },
+        required=['audio'],
+    ),
+)
+@api_view(['POST'])
+@authentication_classes([SessionAuthentication, BasicAuthentication])
+@permission_classes([permissions.AllowAny])
+def speech_to_text(request):
+    # data = open("your/path/to/voice.mp3", "rb") # STT를 진행하고자 하는 음성 파일
+
+
+    Lang = "Kor" # Kor / Jpn / Chn / Eng
+    URL = "https://naveropenapi.apigw.ntruss.com/recog/v1/stt?lang=" + Lang
+        
+    ID = "qcxc89t0bs" # 인증 정보의 Client ID
+    Secret = "vgU8vBup9zR8gFURTxisFeOHDhgfKNuxe2V8GraT" # 인증 정보의 Client Secret
+        
+    headers = {
+        "Content-Type": "application/octet-stream", # Fix
+        "X-NCP-APIGW-API-KEY-ID": ID,
+        "X-NCP-APIGW-API-KEY": Secret,
+    }
+    audio_file = request.FILES.get('audio')
+
+    response = requests.post(URL, data=audio_file.read(), headers=headers)
+    rescode = response.status_code
+    if rescode == 200:
+        return Response(response.text)
