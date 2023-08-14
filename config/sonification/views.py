@@ -80,6 +80,7 @@ def transaction_rank(request):
     for item in response_data['output']:
         data = {
             '종목명': item['hts_kor_isnm'],
+            '종목코드': item['mksc_shrn_iscd'],
             '거래량 순위': item['data_rank'],
             '현재가': item['stck_prpr'],
             '전일 대비율': item['prdy_ctrt'],
@@ -104,9 +105,12 @@ def transaction_rank(request):
 def now_data(request):
     symbol = request.GET.get('symbol')
     resp = broker.fetch_price(symbol)
+    print(resp)
     chart_data = { 
         '전일대비부호': resp['output']['prdy_vrss_sign'],
         '전일 대비율': resp['output']['prdy_ctrt'],
+        '누적 거래량': resp['output']['acml_vol'],
+        'HTS 시가총액': resp['output']['hts_avls'],
         '시가': resp['output']['stck_oprc'],
         '현재가': resp['output']['stck_prpr'],
         '고가': resp['output']['stck_hgpr'],
@@ -208,8 +212,12 @@ def day_data(request):
     for dp in reversed(daily_price):
         chart_data = {
             "종목": jm,
+            "누적 거래량" : dp['acml_vol'],
+            "누적 거래량" : dp['hts_avls'],
             '날짜': dp['stck_bsop_date'],
-            '현재가': dp['stck_clpr'],
+            '현재가': dp['stck_prpr'],
+            '시가': dp['stck_hgpr'],
+            '저가': dp['stck_lwpr'],
         }
         chart.append(int(dp['stck_clpr']))
         data.append(chart_data)
@@ -395,15 +403,22 @@ def week_data(request):
         adj_price=True
     )
     daily_price = resp['output2']
+    print(daily_price)
     jm = resp['output1']['hts_kor_isnm']
+    sc = resp['output1']['hts_avls']
+    hj = resp['output1']['stck_prpr']
     chart= []
     data=[]
     mx = 0 ; mn = 0
     for dp in reversed(daily_price):
         chart_data = {
             "종목": jm,
+            "누적 거래량" : dp['acml_vol'],
+            "시가총액" : sc,
             '날짜': dp['stck_bsop_date'],
-            '현재가': dp['stck_clpr'],
+            '현재가': hj,
+            '시가': dp['stck_hgpr'],
+            '저가': dp['stck_lwpr'],
         }
         chart.append(int(dp['stck_clpr']))
         data.append(chart_data)
@@ -589,11 +604,15 @@ def minute_data(request):
         result = broker._fetch_today_1m_ohlcv(symbol,here_end)
         daily_price = result['output2']
         jm = result['output1']['hts_kor_isnm'] 
+        nj = result['output1']['acml_vol'] 
         for dp in reversed(daily_price):
             chart_data = {
                 "종목": jm,
+                "누적 거래량" : nj,
                 '날짜': dp['stck_bsop_date'],
                 '현재가': dp['stck_prpr'],
+                '시가': dp['stck_hgpr'],
+                '저가': dp['stck_lwpr'],
             }
             chart.append(int(dp['stck_prpr']))
             data.append(chart_data)
