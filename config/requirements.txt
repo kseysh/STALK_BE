@@ -9,12 +9,14 @@ cryptography==41.0.2
 defusedxml==0.7.1
 dj-rest-auth==4.0.1
 Django==4.2.3
+django-cookies-samesite==0.9.0
 django-cors-headers==4.1.0
 django-rest-auth==0.9.5
 djangorestframework==3.14.0
 djangorestframework-simplejwt==5.2.2
 drf-yasg==1.21.7
 exceptiongroup==1.1.2
+ffmpeg==1.4
 gunicorn==21.2.0
 h11==0.14.0
 idna==3.4
@@ -51,6 +53,7 @@ trio==0.22.2
 trio-websocket==0.10.3
 typing_extensions==4.7.1
 tzdata==2023.3
+ua-parser==0.10.0
 uritemplate==4.1.1
 urllib3==2.0.4
 webdriver-manager==4.0.0
