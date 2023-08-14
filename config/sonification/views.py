@@ -763,13 +763,20 @@ def f_minute_data(request):
 @permission_classes([permissions.AllowAny])
 def user_info(request):
     try:
-        user = request.user
-        user_records = user.records.all()
+        # user = request.user
+        user = User.objects.get(id=1)
         user_liked_stocks = Stock.objects.filter(liked_user=user)
         liked_stock_names = [stock.name for stock in user_liked_stocks]
-        user_stock = UserStock.objects.get(user=user)
-        user_stock_data = UserStockSerializer(user_stock).data
-        record_data = RecordSerializer(user_records, many=True).data
+        try:
+            user_stock = UserStock.objects.get(user=user)
+            user_stock_data = UserStockSerializer(user_stock).data
+        except UserStock.DoesNotExist:
+            user_stock_data = None
+        try:
+            user_stock = Record.objects.get(user=user)
+            user_stock_data = RecordSerializer(user_stock).data
+        except Record.DoesNotExist:
+            record_data = None
 
         user_data = {
             'username': user.username,
@@ -805,7 +812,8 @@ def sell(request):
     quantity = request.data.get('quantity')
     resp = broker.fetch_price(stock_symbol)
     to_price = int(resp['output']['stck_prpr'])*quantity
-    user = request.user
+    # user = request.user
+    user = User.objects.get(id=2)
     try:
         stock = Stock.objects.get(symbol=stock_symbol)
     except Stock.DoesNotExist:
@@ -863,7 +871,8 @@ def buy(request):
     resp = broker.fetch_price(stock_symbol)
     to_price = int(resp['output']['stck_prpr'])*quantity
 
-    user = request.user
+    # user = request.user
+    user = User.objects.get(id=2)
 
     try:
         stock = Stock.objects.get(symbol=stock_symbol)
@@ -914,26 +923,30 @@ def buy(request):
     request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT,
         properties={
-            'stock_name': openapi.Schema(type=openapi.TYPE_STRING),
+            'symbol': openapi.Schema(type=openapi.TYPE_STRING),
         },
-        required=['stock_name']
+        required=['symbol']
     )
 )
 @api_view(['POST'])
 @authentication_classes([SessionAuthentication,BasicAuthentication])
 @permission_classes([permissions.AllowAny])
 def like_stock(request):
-    stock_name = request.data.get('stock_name')
+    stock_symbol = request.data.get('symbol')
     try:
-        stock = Stock.objects.get(name=stock_name)
+        stock = Stock.objects.get(symbol=stock_symbol)
     except Stock.DoesNotExist:
         return Response(status=404)
 
-    user = request.user
-    user.liked_stock.add(user)  
-    stock.likes += 1
+    # user = request.user
+    user = User.objects.get(id=2)
+    if user in stock.liked_user.all():
+        stock.liked_user.remove(user)
+        return Response({'message': '찜 취소 완료'})
+    else:
+        stock.liked_user.add(user)  
+        stock.likes += 1
     stock.save()
-
     return Response({'message': '찜 완료'})
 
 ###############################SONIFICATION################################
