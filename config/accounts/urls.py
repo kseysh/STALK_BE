@@ -7,4 +7,5 @@ urlpatterns = [
     path('kakao/logout/', views.kakao_logout),
     path('userinfo/',views.check_jwt_user),
     path('tempuserinfo/',views.call_temp_user_info),
+    path('tempuserlogin/',views.temp_user_login),
 ]
