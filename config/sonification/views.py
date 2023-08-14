@@ -733,7 +733,7 @@ def f_minute_data(request):
         'tr_id': 'HHDFS76950200',
         'custtype': 'P'
     }
-    f_url = "https://openapi.koreainvestment.com:9443/uapi/overseas-price/v1/quotations/inquire-time-itemchartprice?AUTH=&EXCD=NAS&SYMB={}&NMIN=1&PINC=0&NEXT=&NREC=120&FILL=&KEYB=".format(symbol)
+    f_url = "https://openapi.koreainvestment.com:9443/uapi/overseas-price/v1/quotations/inquire-time-itemchartprice?AUTH=&EXCD=NAS&SYMB={}&NMIN=1&PINC=1&NEXT=&NREC=120&FILL=&KEYB=".format(symbol)
 
     response = requests.request("GET", f_url, headers=headers, data=f_payload)
     response_data = response.json() 
@@ -1007,5 +1007,44 @@ class CheckIsLike(APIView):
             return Response({'message': True}, status=200)
         else:
             return Response({'message': False}, status=200)
-        
 
+
+@swagger_auto_schema(
+    method='post',
+    operation_id='음성을 텍스트로 변환',
+    operation_description='사용자의 음성을 텍스트로 변환',
+    tags=['음성'],
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT, 
+        properties={
+            'audio': openapi.Schema(
+                type=openapi.TYPE_FILE,
+            ),
+        },
+        required=['audio'],
+    ),
+)
+@api_view(['POST'])
+@authentication_classes([SessionAuthentication, BasicAuthentication])
+@permission_classes([permissions.AllowAny])
+def speech_to_text(request):
+    # data = open("your/path/to/voice.mp3", "rb") # STT를 진행하고자 하는 음성 파일
+
+
+    Lang = "Kor" # Kor / Jpn / Chn / Eng
+    URL = "https://naveropenapi.apigw.ntruss.com/recog/v1/stt?lang=" + Lang
+        
+    ID = "qcxc89t0bs" # 인증 정보의 Client ID
+    Secret = "vgU8vBup9zR8gFURTxisFeOHDhgfKNuxe2V8GraT" # 인증 정보의 Client Secret
+        
+    headers = {
+        "Content-Type": "application/octet-stream", # Fix
+        "X-NCP-APIGW-API-KEY-ID": ID,
+        "X-NCP-APIGW-API-KEY": Secret,
+    }
+    audio_file = request.FILES.get('audio')
+
+    response = requests.post(URL, data=audio_file.read(), headers=headers)
+    rescode = response.status_code
+    if rescode == 200:
+        return Response(response.text)
