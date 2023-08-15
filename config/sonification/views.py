@@ -997,6 +997,8 @@ def data_to_sound(request):
 
 
 class CheckIsLike(APIView): 
+    authentication_classes = [SessionAuthentication,BasicAuthentication]
+    permission_classes = [permissions.AllowAny]
     stock_name= openapi.Parameter('stock_name', openapi.IN_QUERY, description='stock_name', required=True, type=openapi.TYPE_STRING)
     @swagger_auto_schema(tags=['좋아요가 눌려져 있는 주식인지 확인하는 기능'],manual_parameters=[stock_name], responses={200: 'Success'})
     def get(request):
