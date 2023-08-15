@@ -308,7 +308,7 @@ def f_a_day_data(request):
         'appsecret': secret,
         'tr_id': 'FHKST03030100',
     }
-    url = "https://openapi.koreainvestment.com:9443/uapi/overseas-price/v1/quotations/inquire-daily-chartprice?FID_COND_MRKT_DIV_CODE=N&FID_INPUT_ISCD=QQQ&FID_INPUT_DATE_1=20220531&FID_INPUT_DATE_2=20220731&FID_PERIOD_DIV_CODE=D".format(symbol, start, end)
+    url = "https://openapi.koreainvestment.com:9443/uapi/overseas-price/v1/quotations/inquire-daily-chartprice?FID_COND_MRKT_DIV_CODE=N&FID_INPUT_ISCD={}&FID_INPUT_DATE_1={}&FID_INPUT_DATE_2={}&FID_PERIOD_DIV_CODE=D".format(symbol, start, end)
 
     response = requests.request("GET", url, headers=headers, data=payload)
     response_data = response.json() 
