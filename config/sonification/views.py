@@ -1274,7 +1274,7 @@ def speech_to_text(request):
 def create_stock_database(request):
     ## 국내 주식 시총기준 100위 데이터베이스 생성 ##
     headers = {
-        'content-type': 'application/json',
+        'content-type': 'application/json; charset=utf-8',
         'authorization' : broker.access_token,
         'appkey': key,
         'appsecret': secret,
@@ -1293,12 +1293,12 @@ def create_stock_database(request):
             '전일 대비율': float(item['chgrate']),
             '대비': float(item['change']),
         }
-        try:
-            stock, created = Stock.objects.get_or_create(
+        stock, created = Stock.objects.get_or_create(
             symbol=item['code'],
             name=item['name'],
             is_domestic_stock = True,
             )
+        try:
             if created:
                 like=0
                 data['좋아요 개수'] = like
