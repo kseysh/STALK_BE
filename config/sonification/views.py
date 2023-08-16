@@ -61,53 +61,6 @@ f_payload = ""
 
 ##################DRF####################
 
-####거래량 순위####
-# @swagger_auto_schema(
-#     method='get',
-#     operation_id='거래량 순위(30개)',
-#     operation_description='거래량 순위(30개)',
-#     tags=['주식 데이터']
-# )
-# @api_view(['GET'])
-# @authentication_classes([SessionAuthentication,BasicAuthentication])
-# @permission_classes([permissions.AllowAny])
-# def transaction_rank(request):
-#     headers = {
-#         'content-type': 'application/json',
-#         'authorization' : broker.access_token,
-#         'appkey': key,
-#         'appsecret': secret,
-#         'tr_id': 'FHPST01710000',
-#         'custtype': 'P'
-#     }
-#     url = "https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/volume-rank?FID_COND_MRKT_DIV_CODE=J&FID_COND_SCR_DIV_CODE=20171&FID_INPUT_ISCD=0002&FID_DIV_CLS_CODE=0&FID_BLNG_CLS_CODE=0&FID_TRGT_CLS_CODE=111111111&FID_TRGT_EXLS_CLS_CODE=000000&FID_INPUT_PRICE_1=0&FID_INPUT_PRICE_2=0&FID_VOL_CNT=0&FID_INPUT_DATE_1=0"
-#     response = requests.get(url, headers=headers)
-#     response_data = response.json() 
-#     transaction_data_list = []
-#     for item in response_data['output']:
-#         data = {
-#             '종목명': item['hts_kor_isnm'],
-#             '종목코드': item['mksc_shrn_iscd'],
-#             '거래량 순위': item['data_rank'],
-#             '현재가': item['stck_prpr'],
-#             '전일 대비율': item['prdy_ctrt'],
-#             '누적 거래량': item['acml_vol'],# 1일 거래량 입니다
-#         }
-#         try:
-#             stock, created = Stock.objects.get_or_create(
-#             symbol=item['mksc_shrn_iscd'],
-#             name=item['hts_kor_isnm'],
-#             likes=0,
-#             )
-#             if created:
-#                 transaction_data_list.append(data)
-#             else: 
-#                 transaction_data_list.append(data)
-#         except IntegrityError:
-#             pass
-
-#     return Response({'거래량 순위': transaction_data_list})
-
 ####해외주식 시가총액 기준####
 
 @swagger_auto_schema(
@@ -1274,4 +1227,3 @@ def speech_to_text(request):
     rescode = response.status_code
     if rescode == 200:
         return Response(response.text)
-    
