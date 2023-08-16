@@ -16,10 +16,10 @@ class UserStock(models.Model):
     stock = models.ForeignKey(Stock, on_delete=models.CASCADE)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     having_quantity = models.IntegerField()
-    price = models.DecimalField(max_digits=10, decimal_places=2)
-    profit_loss = models.DecimalField(max_digits=10, decimal_places=2)
-    rate_profit_loss = models.DecimalField(max_digits=10, decimal_places=2)
-    now_price = models.DecimalField(max_digits=10, decimal_places=2)
+    price = models.FloatField()
+    profit_loss = models.FloatField()
+    rate_profit_loss = models.FloatField()
+    now_price = models.FloatField()
     def __str__(self):
         return f"{self.stock} - {self.user}"
 
@@ -28,8 +28,8 @@ class Record(models.Model):
     stock = models.ForeignKey(Stock, on_delete=models.CASCADE,default = 1)
     transaction_type = models.CharField(max_length=2) #구매 or 판매
     quantity = models.IntegerField()
-    price = models.DecimalField(max_digits=10, decimal_places=2)
-    left_money = models.DecimalField(max_digits=10, decimal_places=2)
+    price = models.FloatField()
+    left_money = models.FloatField()
     date = models.DateField(auto_now_add=True)
     
     def __str__(self):

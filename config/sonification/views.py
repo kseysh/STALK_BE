@@ -940,7 +940,6 @@ def f_now_data(request):
     response = requests.request("GET", f_url, headers=headers, data=f_payload)
     response_data = response.json() 
     daily_price = response_data['output'] 
-    data= []
     chart_data = {
         '거래량' : daily_price['tvol'],
         '전일종가': daily_price['base'],
@@ -964,8 +963,7 @@ def f_now_data(request):
                 user_stock.save()
     else:
         pass
-    data.append(chart_data)
-    return JsonResponse({'data': data}, safe=False)
+    return JsonResponse({'chart_data': chart_data}, safe=False)
 
 ###############################TRANSACTION#################################
 
@@ -982,7 +980,7 @@ def f_now_data(request):
 def user_info(request):
     try:
         # user = request.user
-        user = User.objects.get(id=1)
+        user = User.objects.get(id=2)
         user_liked_stocks = Stock.objects.filter(liked_user=user)
         liked_stock_names = [stock.name for stock in user_liked_stocks]
         try:
@@ -991,8 +989,8 @@ def user_info(request):
         except UserStock.DoesNotExist:
             user_stock_data = None
         try:
-            user_stock = Record.objects.get(user=user)
-            user_stock_data = RecordSerializer(user_stock).data
+            record = Record.objects.filter(user=user)
+            record_data = RecordSerializer(record, many=True).data
         except Record.DoesNotExist:
             record_data = None
 
@@ -1032,6 +1030,8 @@ def sell(request):
     to_price = int(resp['output']['stck_prpr'])*quantity
     # user = request.user
     user = User.objects.get(id=2)
+    if(quantity<=0):
+        return Response({"error": "양수값을 넣어라"})
     try:
         stock = Stock.objects.get(symbol=stock_symbol)
     except Stock.DoesNotExist:
@@ -1058,7 +1058,7 @@ def sell(request):
         transaction_type = '판매',
         quantity = quantity,
         price = to_price,
-        left_money = user.user_property + to_price
+        left_money = user.user_property
     )
     stock_data = StockSerializer(stock).data
     user_stock_data = UserStockSerializer(user_stock).data
@@ -1091,7 +1091,8 @@ def buy(request):
 
     # user = request.user
     user = User.objects.get(id=2)
-
+    if(quantity<=0):
+        return Response({"error": "양수값을 넣어라"})
     try:
         stock = Stock.objects.get(symbol=stock_symbol)
     except Stock.DoesNotExist:
