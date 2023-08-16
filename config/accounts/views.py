@@ -84,8 +84,8 @@ def kakao_callback(request):
             },
             status=status.HTTP_200_OK,
         )
-        res.set_cookie("accessToken", value=access_token, max_age=None, expires=None, secure=True, samesite=None, httponly=True)
-        res.set_cookie("refreshToken", value=refresh_token, max_age=None, expires=None, secure=True, samesite=None,httponly=True)
+        res.set_cookie("accessToken", value=access_token, max_age=None, expires=None, secure=True, samesite="None", httponly=True)
+        res.set_cookie("refreshToken", value=refresh_token, max_age=None, expires=None, secure=True, samesite="None",httponly=True)
         return res
     except User.DoesNotExist:
         user = User.objects.create_user(username=username)
@@ -108,8 +108,8 @@ def kakao_callback(request):
             },
             status=status.HTTP_200_OK,
         )
-        res.set_cookie("accessToken",  value=access_token, max_age=None, expires=None, secure=True, samesite=None, httponly=True)
-        res.set_cookie("refreshToken",  value=refresh_token, max_age=None, expires=None, secure=True, samesite=None, httponly=True)
+        res.set_cookie("accessToken", value=access_token, max_age=None, expires=None, secure=True, samesite="None", httponly=True)
+        res.set_cookie("refreshToken", value=refresh_token, max_age=None, expires=None, secure=True, samesite="None",httponly=True)
 
         return res
     
@@ -125,42 +125,66 @@ def kakao_logout(self):
     response.delete_cookie("refreshToken")
     return response
 
+# @api_view(['GET'])
+# @authentication_classes([SessionAuthentication,BasicAuthentication])
+# # @permission_classes([permissions.IsAuthenticated])
+# @permission_classes([permissions.AllowAny])
+# def user_info(request):
+#     try:
+#         access = request.COOKIES['accessToken']
+#         payload = jwt.decode(access, settings.SECRET_KEY, algorithms=['HS256'])
+#         username = payload.get('username')
+#         user = get_object_or_404(User, username=username)
+#         serializer = UserSerializer(instance=user)
+#         return Response(serializer.data, status=status.HTTP_200_OK)
+
+#     except(jwt.exceptions.ExpiredSignatureError):
+#         data = {'refresh': request.COOKIES.get('refreshToken', None)}
+#         serializer = TokenRefreshSerializer(data=data)
+#         if serializer.is_valid(raise_exception=True):
+#             access = serializer.data.get('accessToken', None)
+#             refresh = serializer.data.get('refreshToken', None)
+#             payload = jwt.decode(access, settings.SECRET_KEY, algorithms=['HS256'])
+#             username = payload.get('username')
+#             user = get_object_or_404(User, username=username)
+#             serializer = UserSerializer(instance=user)
+#             res = Response(serializer.data, status=status.HTTP_200_OK)
+#             res.set_cookie("accessToken", value=access, max_age=None, expires=None, secure=True, samesite="None", httponly=True)
+#             res.set_cookie("refreshToken", value=refresh, max_age=None, expires=None, secure=True, samesite="None",httponly=True)
+
+#             return res
+#         raise jwt.exceptions.InvalidTokenError
+
 @api_view(['GET'])
 @authentication_classes([SessionAuthentication,BasicAuthentication])
-# @permission_classes([permissions.IsAuthenticated])
 @permission_classes([permissions.AllowAny])
-def check_jwt_user(request):
-    # access = request.COOKIES['accessToken']
-    # return 
-    try:
-        access = request.COOKIES['accessToken']
-        payload = jwt.decode(access, settings.SECRET_KEY, algorithms=['HS256'])
-        username = payload.get('username')
-        user = get_object_or_404(User, username=username)
-        serializer = UserSerializer(instance=user)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+def user_info(request):
+    user = get_object_or_404(User, id = 2)
+    serializer = UserSerializer(instance=user)
+    return Response(serializer.data, status=status.HTTP_200_OK)
 
-    except(jwt.exceptions.ExpiredSignatureError):
-        data = {'refresh': request.COOKIES.get('refreshToken', None)}
-        serializer = TokenRefreshSerializer(data=data)
-        if serializer.is_valid(raise_exception=True):
-            access = serializer.data.get('accessToken', None)
-            refresh = serializer.data.get('refreshToken', None)
-            payload = jwt.decode(access, settings.SECRET_KEY, algorithms=['HS256'])
-            username = payload.get('username')
-            user = get_object_or_404(User, username=username)
-            serializer = UserSerializer(instance=user)
-            res = Response(serializer.data, status=status.HTTP_200_OK)
-            res.set_cookie("accessToken", value=access, max_age=None, expires=None, secure=True, samesite=None, httponly=True)
-            res.set_cookie("refreshToken", value=refresh, max_age=None, expires=None, secure=True, samesite=None,httponly=True)
+@api_view(['GET'])
+@authentication_classes([SessionAuthentication,BasicAuthentication])
+@permission_classes([permissions.AllowAny])
+def temp_user_login(request):
+    user = User.objects.get(id = 2)
+    user_serializer = UserSerializer(user)
+    token = TokenObtainPairSerializer.get_token(user)
+    refresh_token = str(token)
+    access_token = str(token.access_token)
+    res = Response(
+        {
+            "user": user_serializer.data,
+            "message": "login successs",
+            "token": {
+                "access": access_token,
+                "refresh": refresh_token,
+            },
+        },
+        status=status.HTTP_200_OK,
+    )
+    res.set_cookie("accessToken", value=access_token, max_age=None, expires=None, secure=True, samesite="None", httponly=True)
+    res.set_cookie("refreshToken", value=refresh_token, max_age=None, expires=None, secure=True, samesite="None",httponly=True)
+    return res
 
-            return res
-        raise jwt.exceptions.InvalidTokenError
 
-
-def post(request):
-    user = User.objects.get(id=1)
-    print(user)
-    s = UserSerializer(user)
-    print(s.data)
-    return Response(s.data,status=200)

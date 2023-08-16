@@ -52,6 +52,7 @@ trio==0.22.2
 trio-websocket==0.10.3
 typing_extensions==4.7.1
 tzdata==2023.3
+ua-parser==0.10.0
 uritemplate==4.1.1
 urllib3==2.0.4
 webdriver-manager==4.0.0

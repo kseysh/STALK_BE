@@ -8,3 +8,4 @@ db.sqlite3
 static
 token.dat
 koreainvestment.key
+.DS_Store
