@@ -30,6 +30,7 @@ lines = f.readlines()
 key = lines[0].strip()
 secret = lines[1].strip()
 acc_no = lines[2].strip()
+sound_secret = lines[3].strip()
 f.close()
 
 broker = mojito.KoreaInvestment(
@@ -135,10 +136,10 @@ def f_transaction_rank(request):
             '종목명': item['name'],
             '종목코드': item['symb'],
             '시가총액 순위': item['rank'],
-            '시가총액' : item['valx'],
-            '현재가': item['last'],
-            '전일 대비율': item['rate'],
-            '대비': item['diff'],
+            '시가총액' : float(item['valx']),
+            '현재가': float(item['last']),
+            '전일 대비율': float(item['rate']),
+            '대비': float(item['diff']),
         }
         try:
             stock, created = Stock.objects.get_or_create(
@@ -147,10 +148,16 @@ def f_transaction_rank(request):
             likes=0,
             )
             if created:
+                like=0
+                data['좋아요 개수'] = like
                 transaction_data_list.append(data)
             else: 
+                like=stock.likes
+                data['좋아요 개수'] = like
                 transaction_data_list.append(data)
         except IntegrityError:
+            like=stock.likes
+            data['좋아요 개수'] = like
             pass
 
     return Response({'시가총액 순위': transaction_data_list})
@@ -181,10 +188,10 @@ def transaction_rank(request):
         data = {
             '종목명': item['name'],
             '종목코드': item['code'],
-            '시가총액' : item['stotprice'],
-            '현재가': item['price'],
-            '전일 대비율': item['chgrate'],
-            '대비': item['change'],
+            '시가총액' : float(item['stotprice']),
+            '현재가':float(item['price']),
+            '전일 대비율': float(item['chgrate']),
+            '대비': float(item['change']),
         }
         try:
             stock, created = Stock.objects.get_or_create(
@@ -193,10 +200,16 @@ def transaction_rank(request):
             likes=0,
             )
             if created:
+                like=0
+                data['좋아요 개수'] = like
                 transaction_data_list.append(data)
             else: 
+                like=stock.likes
+                data['좋아요 개수'] = like
                 transaction_data_list.append(data)
         except IntegrityError:
+            like=stock.likes
+            data['좋아요 개수'] = like
             pass
 
     return Response({'시가총액 순위': transaction_data_list})
@@ -1248,13 +1261,12 @@ def speech_to_text(request):
     Lang = "Kor" # Kor / Jpn / Chn / Eng
     URL = "https://naveropenapi.apigw.ntruss.com/recog/v1/stt?lang=" + Lang
         
-    ID = "qcxc89t0bs" # 인증 정보의 Client ID
-    Secret = "vgU8vBup9zR8gFURTxisFeOHDhgfKNuxe2V8GraT" # 인증 정보의 Client Secret
+    ID = "qcxc89t0bs" 
         
     headers = {
         "Content-Type": "application/octet-stream", # Fix
         "X-NCP-APIGW-API-KEY-ID": ID,
-        "X-NCP-APIGW-API-KEY": Secret,
+        "X-NCP-APIGW-API-KEY": sound_secret,
     }
     audio_file = request.FILES.get('audio')
 
@@ -1262,3 +1274,4 @@ def speech_to_text(request):
     rescode = response.status_code
     if rescode == 200:
         return Response(response.text)
+    
