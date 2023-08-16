@@ -9,6 +9,7 @@ class Stock(models.Model):
     name = models.CharField(max_length=100) 
     likes = models.IntegerField()
     liked_user = models.ManyToManyField(User, related_name="liked_stock", blank=True)
+    is_domestic_stock = models.BooleanField(default=True)
     def __str__(self):
         return self.name
 
