@@ -948,7 +948,7 @@ def user_info(request):
         # user = request.user
         user = User.objects.get(id=2)
         user_liked_stocks = Stock.objects.filter(liked_user=user)
-        liked_stock_names = [stock.name for stock in user_liked_stocks]
+        liked_stock_data = [{'prdt_name': stock.name, 'code': stock.symbol} for stock in user_liked_stocks]
         try:
             user_stock = UserStock.objects.get(user=user)
             user_stock_data = UserStockSerializer(user_stock).data
@@ -966,7 +966,7 @@ def user_info(request):
             'user_property': user.user_property,
         }
         
-        return Response({'유저정보': user_data,'찜한목록': liked_stock_names,'모의투자한 종목' : user_stock_data , '거래 기록' : record_data})
+        return Response({'유저정보': user_data,'찜한목록': liked_stock_data,'모의투자한 종목' : user_stock_data , '거래 기록' : record_data})
     
     except User.DoesNotExist:
         return Response({'error': '로그인 하세요.'}, status=404)
