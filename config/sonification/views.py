@@ -84,6 +84,7 @@ def f_transaction_rank(request):
     response = requests.get(url, headers=headers)
     response_data = response.json() 
     transaction_data_list = []
+    exchange_rate = get_exchange_rate()
     for item in response_data['output2']:
         data = {
             '종목명': item['name'],
@@ -93,6 +94,7 @@ def f_transaction_rank(request):
             '현재가': float(item['last']),
             '전일 대비율': float(item['rate']),
             '대비': float(item['diff']),
+            '환율':exchange_rate,
         }
         try:
             stock, created = Stock.objects.get_or_create(
@@ -357,6 +359,7 @@ def f_a_day_data(request):
     chart= [] 
     data= []
     mx = 0 ; mn = 0
+    exchange_rate = get_exchange_rate()
     for dp in reversed(daily_price):
         chart_data = {
             '업종' : jm,
@@ -367,6 +370,7 @@ def f_a_day_data(request):
             '해당일 업종 현재가': dp['ovrs_nmix_prpr'],
             '해당일 업종 고가': dp['ovrs_nmix_hgpr'],
             '해당일 업종 저가': dp['ovrs_nmix_lwpr'],
+            '환율':exchange_rate,
         }
         print(chart_data)
         chart.append(float(dp['ovrs_nmix_prpr']))
@@ -410,6 +414,7 @@ def f_day_data(request):
     chart= []
     data=[]
     mx = 0 ; mn = 0
+    exchange_rate = get_exchange_rate()
     for dp in reversed(daily_price):
         chart_data = {
             '날짜': dp['xymd'],
@@ -418,6 +423,7 @@ def f_day_data(request):
             '고가': dp['high'],
             '저가': dp['low'],
             '거래량': dp['tvol'],
+            '환율':exchange_rate,
         }
         chart.append(float(dp['clos']))
         data.append(chart_data)
@@ -596,6 +602,31 @@ def f_a_week_data(request):
     lista = substitution(mx,mn,chart)
     return JsonResponse({'data': data, 'lista': lista}, safe=False)
 
+
+# @swagger_auto_schema(
+#     method='get',
+#     operation_id='환율 반환',
+#     operation_description='환율 반환',
+#     tags=['환율'],
+# )
+# @api_view(['GET'])
+def get_exchange_rate():
+    payload=""
+    headers = {
+        'content-type': 'application/json; charset=utf-8',
+        'authorization' : broker.access_token,
+        'appkey': key,
+        'appsecret': secret,
+        'tr_id': 'HHDFS76200200',
+        'custtype':'P',
+    }
+    url = "https://openapi.koreainvestment.com:9443/uapi/overseas-price/v1/quotations/price-detail?AUTH=&EXCD=NAS&SYMB=TSLA"#AUTH는 아무 값도 안들어가는 것이 맞나요?
+
+    response = requests.request("GET", url, headers=headers, data=payload)
+    response_data = response.json() 
+    exchange_rate = response_data['output']['t_rate']
+    return exchange_rate
+
 ####주 단위 종목 데이터 해외####
 @swagger_auto_schema(
     method='get',
@@ -630,6 +661,7 @@ def f_week_data(request):
     chart= []
     data=[]
     mx = 0 ; mn = 0
+    exchange_rate = get_exchange_rate()
     for dp in reversed(daily_price):
         chart_data = {
             '날짜': dp['xymd'],
@@ -639,6 +671,7 @@ def f_week_data(request):
             '거래량': dp['tvol'],
             '최고가': dp['high'],
             '최저가': dp['low'],
+            '환율':exchange_rate,
         }
         chart.append(float(dp['clos']))
         data.append(chart_data)
@@ -815,6 +848,7 @@ def f_a_minute_data(request):
     chart= []
     data= []
     mx = 0 ; mn = 0
+    exchange_rate = get_exchange_rate()
     for dp in reversed(daily_price):
         chart_data = {
             '업종' : jm,
@@ -824,6 +858,7 @@ def f_a_minute_data(request):
             '해당일 업종 시가': dp['optn_oprc'],
             '해당일 업종 고가': dp['optn_hgpr'],
             '해당일 업종 저가': dp['optn_lwpr'],
+            '환율':exchange_rate,
         }
         print(chart_data)
         chart.append(float(dp['optn_prpr']))
@@ -864,6 +899,7 @@ def f_minute_data(request):
     chart= [] 
     data= []
     mx = 0 ; mn = 0
+    exchange_rate = get_exchange_rate()
     for dp in reversed(daily_price):
         chart_data = {
             '한국기준일자': dp['kymd'],
@@ -872,6 +908,7 @@ def f_minute_data(request):
             '시가': dp['open'],
             '고가': dp['high'],
             '저가': dp['low'],
+            '환율':exchange_rate,
         }
         chart.append(float(dp['last']))
         data.append(chart_data)
@@ -906,6 +943,8 @@ def f_now_data(request):
     response = requests.request("GET", f_url, headers=headers, data=f_payload)
     response_data = response.json() 
     daily_price = response_data['output'] 
+    exchange_rate = get_exchange_rate()
+
     chart_data = {
         '거래량' : daily_price['tvol'],
         '전일종가': daily_price['base'],
@@ -915,6 +954,7 @@ def f_now_data(request):
         '시가': daily_price['open'],
         '시가총액': daily_price['tomv'],
         '등락율': daily_price['t_xrat'],
+        '환율':exchange_rate,
     }
     stock = Stock.objects.get(symbol=symbol)
     user_stock = UserStock.objects.filter(stock=stock)
@@ -1230,3 +1270,4 @@ def speech_to_text(request):
     rescode = response.status_code
     if rescode == 200:
         return Response(response.text)
+
