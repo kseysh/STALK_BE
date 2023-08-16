@@ -1,3 +1,4 @@
+from django.db import IntegrityError
 import requests
 import mojito
 import numpy as np
@@ -60,10 +61,105 @@ f_payload = ""
 ##################DRF####################
 
 ####거래량 순위####
+# @swagger_auto_schema(
+#     method='get',
+#     operation_id='거래량 순위(30개)',
+#     operation_description='거래량 순위(30개)',
+#     tags=['주식 데이터']
+# )
+# @api_view(['GET'])
+# @authentication_classes([SessionAuthentication,BasicAuthentication])
+# @permission_classes([permissions.AllowAny])
+# def transaction_rank(request):
+#     headers = {
+#         'content-type': 'application/json',
+#         'authorization' : broker.access_token,
+#         'appkey': key,
+#         'appsecret': secret,
+#         'tr_id': 'FHPST01710000',
+#         'custtype': 'P'
+#     }
+#     url = "https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/volume-rank?FID_COND_MRKT_DIV_CODE=J&FID_COND_SCR_DIV_CODE=20171&FID_INPUT_ISCD=0002&FID_DIV_CLS_CODE=0&FID_BLNG_CLS_CODE=0&FID_TRGT_CLS_CODE=111111111&FID_TRGT_EXLS_CLS_CODE=000000&FID_INPUT_PRICE_1=0&FID_INPUT_PRICE_2=0&FID_VOL_CNT=0&FID_INPUT_DATE_1=0"
+#     response = requests.get(url, headers=headers)
+#     response_data = response.json() 
+#     transaction_data_list = []
+#     for item in response_data['output']:
+#         data = {
+#             '종목명': item['hts_kor_isnm'],
+#             '종목코드': item['mksc_shrn_iscd'],
+#             '거래량 순위': item['data_rank'],
+#             '현재가': item['stck_prpr'],
+#             '전일 대비율': item['prdy_ctrt'],
+#             '누적 거래량': item['acml_vol'],# 1일 거래량 입니다
+#         }
+#         try:
+#             stock, created = Stock.objects.get_or_create(
+#             symbol=item['mksc_shrn_iscd'],
+#             name=item['hts_kor_isnm'],
+#             likes=0,
+#             )
+#             if created:
+#                 transaction_data_list.append(data)
+#             else: 
+#                 transaction_data_list.append(data)
+#         except IntegrityError:
+#             pass
+
+#     return Response({'거래량 순위': transaction_data_list})
+
+####해외주식 시가총액 기준####
+
 @swagger_auto_schema(
     method='get',
-    operation_id='거래량 순위(50개)',
-    operation_description='거래량 순위(50개)',
+    operation_id='(해외)시가총액기준 정렬(100개)',
+    operation_description='(해외)시가총액기준 정렬(100개)',
+    tags=['(해외)주식 데이터']
+)
+@api_view(['GET'])
+@authentication_classes([SessionAuthentication,BasicAuthentication])
+@permission_classes([permissions.AllowAny])
+def f_transaction_rank(request):
+    headers = {
+        'content-type': 'application/json',
+        'authorization' : broker.access_token,
+        'appkey': key,
+        'appsecret': secret,
+        'tr_id': 'HHDFS76410000',
+    }
+    url = "https://openapi.koreainvestment.com:9443/uapi/overseas-price/v1/quotations/inquire-search?AUTH=&EXCD=NAS&CO_YN_PRICECUR=&CO_ST_PRICECUR=&CO_EN_PRICECUR=&CO_YN_RATE=&CO_ST_RATE=&CO_EN_RATE=&CO_YN_VALX=1&CO_ST_VALX=0&CO_EN_VALX=100000000000000&CO_YN_SHAR=&CO_ST_SHAR=&CO_EN_SHAR=&CO_YN_VOLUME=&CO_ST_VOLUME=&CO_YN_AMT=&CO_EN_VOLUME=&CO_ST_AMT=&CO_EN_AMT=&CO_YN_EPS=&CO_ST_EPS=&CO_EN_EPS=&CO_YN_PER=&CO_ST_PER=&CO_EN_PER="
+    response = requests.get(url, headers=headers)
+    response_data = response.json() 
+    transaction_data_list = []
+    for item in response_data['output2']:
+        data = {
+            '종목명': item['name'],
+            '종목코드': item['symb'],
+            '시가총액 순위': item['rank'],
+            '시가총액' : item['valx'],
+            '현재가': item['last'],
+            '전일 대비율': item['rate'],
+            '대비': item['diff'],
+        }
+        try:
+            stock, created = Stock.objects.get_or_create(
+            symbol=item['symb'],
+            name=item['name'],
+            likes=0,
+            )
+            if created:
+                transaction_data_list.append(data)
+            else: 
+                transaction_data_list.append(data)
+        except IntegrityError:
+            pass
+
+    return Response({'시가총액 순위': transaction_data_list})
+
+####국내주식 시가총액 기준####
+@swagger_auto_schema(
+    method='get',
+    operation_id='시가총액기준 정렬(100개)',
+    operation_description= '시가총액기준 정렬(100개)',
     tags=['주식 데이터']
 )
 @api_view(['GET'])
@@ -75,24 +171,35 @@ def transaction_rank(request):
         'authorization' : broker.access_token,
         'appkey': key,
         'appsecret': secret,
-        'tr_id': 'FHPST01710000',
-        'custtype': 'P'
+        'tr_id': 'HHKST03900400'
     }
-    url = "https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/volume-rank?FID_COND_MRKT_DIV_CODE=J&FID_COND_SCR_DIV_CODE=20171&FID_INPUT_ISCD=0002&FID_DIV_CLS_CODE=0&FID_BLNG_CLS_CODE=0&FID_TRGT_CLS_CODE=111111111&FID_TRGT_EXLS_CLS_CODE=000000&FID_INPUT_PRICE_1=0&FID_INPUT_PRICE_2=0&FID_VOL_CNT=0&FID_INPUT_DATE_1=0"
+    url = "https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/psearch-result?user_id=@2108665&seq=0"
     response = requests.get(url, headers=headers)
     response_data = response.json() 
     transaction_data_list = []
-    for item in response_data['output']:
+    for item in response_data['output2']:
         data = {
-            '종목명': item['hts_kor_isnm'],
-            '종목코드': item['mksc_shrn_iscd'],
-            '거래량 순위': item['data_rank'],
-            '현재가': item['stck_prpr'],
-            '전일 대비율': item['prdy_ctrt'],
-            '누적 거래량': item['acml_vol'],# 1일 거래량 입니다
+            '종목명': item['name'],
+            '종목코드': item['code'],
+            '시가총액' : item['stotprice'],
+            '현재가': item['price'],
+            '전일 대비율': item['chgrate'],
+            '대비': item['change'],
         }
-        transaction_data_list.append(data)
-    return Response({'거래량 순위': transaction_data_list})
+        try:
+            stock, created = Stock.objects.get_or_create(
+            symbol=item['code'],
+            name=item['name'],
+            likes=0,
+            )
+            if created:
+                transaction_data_list.append(data)
+            else: 
+                transaction_data_list.append(data)
+        except IntegrityError:
+            pass
+
+    return Response({'시가총액 순위': transaction_data_list})
 
 ####호출기준 현재가####
 @swagger_auto_schema(
@@ -136,51 +243,6 @@ def now_data(request):
         pass
     return JsonResponse({'chart_data': chart_data}, safe=True)
 
-####해외 호출기준 데이터 ####
-@swagger_auto_schema(
-    method='get',
-    operation_id='(해외)현재 주가 확인 및 사용자 투자종목 업데이트',
-    operation_description='api호출한 순간의 해당종목 데이터',
-    tags=['(해외)주식 데이터'],
-    manual_parameters=[
-        openapi.Parameter('symbol', in_=openapi.IN_QUERY, description='종목코드', type=openapi.TYPE_STRING),
-    ],
-)
-@api_view(['GET'])
-@authentication_classes([SessionAuthentication,BasicAuthentication])
-@permission_classes([permissions.AllowAny])
-def f_now_data(request):
-    symbol = request.GET.get('symbol')
-    broker = mojito.KoreaInvestment(
-    api_key=key,
-    api_secret=secret,
-    acc_no=acc_no,
-    exchange="나스닥",
-    mock=True
-    )
-    resp = broker.fetch_oversea_price(symbol)
-    chart_data = { 
-        '거래량': resp['output']['tvol'],
-        '현재가': resp['output']['last'],
-        '대비': resp['output']['diff'],
-        '등락율': resp['output']['rate']
-    }
-    stock = Stock.objects.get(symbol=symbol)
-    user_stock = UserStock.objects.filter(stock=stock)
-
-    if user_stock is not None:
-        for user_stock in user_stock:
-            if user_stock.having_quantity >= 1:
-                now_stock_price=float(resp['output']['last']) * user_stock.having_quantity
-                user_stock.profit_loss = user_stock.price - now_stock_price
-                user_stock.now_price = now_stock_price
-                user_stock.rate_profit_loss=(now_stock_price-user_stock.price)/user_stock.price*100
-
-                user_stock.save()
-    else:
-        return JsonResponse({'chart_data': chart_data}, safe=True)
-    return JsonResponse({'chart_data': chart_data}, safe=True)
-
 ####일 데이터####
 @swagger_auto_schema(
     method='get',
@@ -209,19 +271,24 @@ def day_data(request):
         adj_price=True
     )
     daily_price = resp['output2']
-    jm = resp['output1']['hts_kor_isnm'] #종목명
-    print(jm)
+    jm = resp['output1']['hts_kor_isnm']
+    sc = resp['output1']['hts_avls']
+    hj = resp['output1']['stck_prpr']
+    dby = resp['output1']['prdy_ctrt']
     chart= []
     data=[]
     mx = 0 ; mn = 0
     for dp in reversed(daily_price):
         chart_data = {
             "종목": jm,
+            "전일 대비율": dby,
             "누적 거래량" : dp['acml_vol'],
-            "누적 거래량" : dp['hts_avls'],
+            "시가총액" : sc,
             '날짜': dp['stck_bsop_date'],
-            '현재가': dp['stck_prpr'],
-            '시가': dp['stck_hgpr'],
+            '종가': dp['stck_clpr'],
+            '시가': dp['stck_oprc'],
+            '현재가': hj,
+            '고가': dp['stck_hgpr'],
             '저가': dp['stck_lwpr'],
         }
         chart.append(int(dp['stck_clpr']))
@@ -263,6 +330,7 @@ def a_day_data(request):
     response_data = response.json() 
     jm = response_data['output1']['hts_kor_isnm']
     now_jm = response_data['output1']['bstp_nmix_prpr']
+    dby = response_data['output1']['bstp_nmix_prdy_ctrt']
     daily_price = response_data['output2']
     chart= [] 
     data= []
@@ -270,9 +338,13 @@ def a_day_data(request):
     for dp in reversed(daily_price):
         chart_data = {
             '업종' : jm,
+            '전일 대비율' : dby,
             '일자': dp['stck_bsop_date'],
+            '시가': dp['bstp_nmix_oprc'],
             '호출시간 현재가': now_jm,
             '해당일 업종 현재가': dp['bstp_nmix_prpr'],
+            '해당일 업종 고가': dp['bstp_nmix_hgpr'],
+            '해당일 업종 저가': dp['bstp_nmix_lwpr'],
         }
         chart.append(float(dp['bstp_nmix_prpr']))
         data.append(chart_data)
@@ -288,7 +360,7 @@ def a_day_data(request):
     operation_description='최대 50일 조회가능/ 시작일~종료일 + 현재 업종 데이터 보고 싶으면 하루만 조회해서 보세요',
     tags=['(해외)(업종)주식 데이터'],
     manual_parameters=[
-        openapi.Parameter('symbol', in_=openapi.IN_QUERY, description='업종코드(S&P500 : SPX)', type=openapi.TYPE_STRING),
+        openapi.Parameter('symbol', in_=openapi.IN_QUERY, description='업종코드(S&P500 : SPX, 나스닥100:NDX)', type=openapi.TYPE_STRING),
         openapi.Parameter('start', in_=openapi.IN_QUERY, description='시작일(YYYYMMDD 형식)', type=openapi.TYPE_STRING),
         openapi.Parameter('end', in_=openapi.IN_QUERY, description='종료일(YYYYMMDD 형식)', type=openapi.TYPE_STRING),
     ],
@@ -314,6 +386,7 @@ def f_a_day_data(request):
     response_data = response.json() 
     jm = response_data['output1']['hts_kor_isnm']
     now_jm = response_data['output1']['ovrs_nmix_prpr']
+    jg = response_data['output1']['ovrs_nmix_prdy_clpr']
     daily_price = response_data['output2']
     chart= [] 
     data= []
@@ -322,8 +395,12 @@ def f_a_day_data(request):
         chart_data = {
             '업종' : jm,
             '일자': dp['stck_bsop_date'],
+            '시가': dp['ovrs_nmix_oprc'],
+            '전일종가': jg,
             '호출시간 현재가': now_jm,
             '해당일 업종 현재가': dp['ovrs_nmix_prpr'],
+            '해당일 업종 고가': dp['ovrs_nmix_hgpr'],
+            '해당일 업종 저가': dp['ovrs_nmix_lwpr'],
         }
         print(chart_data)
         chart.append(float(dp['ovrs_nmix_prpr']))
@@ -371,6 +448,10 @@ def f_day_data(request):
         chart_data = {
             '날짜': dp['xymd'],
             '종가': dp['clos'],
+            '시가': dp['open'],
+            '고가': dp['high'],
+            '저가': dp['low'],
+            '거래량': dp['tvol'],
         }
         chart.append(float(dp['clos']))
         data.append(chart_data)
@@ -412,17 +493,21 @@ def week_data(request):
     jm = resp['output1']['hts_kor_isnm']
     sc = resp['output1']['hts_avls']
     hj = resp['output1']['stck_prpr']
+    dby = resp['output1']['prdy_ctrt']
     chart= []
     data=[]
     mx = 0 ; mn = 0
     for dp in reversed(daily_price):
         chart_data = {
             "종목": jm,
+            "전일 대비율": dby,
             "누적 거래량" : dp['acml_vol'],
             "시가총액" : sc,
             '날짜': dp['stck_bsop_date'],
             '현재가': hj,
-            '시가': dp['stck_hgpr'],
+            '시가' : dp['stck_oprc'],
+            '종가' : dp['stck_clpr'],
+            '고가': dp['stck_hgpr'],
             '저가': dp['stck_lwpr'],
         }
         chart.append(int(dp['stck_clpr']))
@@ -464,6 +549,7 @@ def a_week_data(request):
     response_data = response.json() 
     jm = response_data['output1']['hts_kor_isnm']
     now_jm = response_data['output1']['bstp_nmix_prpr']
+    dby = response_data['output1']['bstp_nmix_prdy_ctrt']
     daily_price = response_data['output2']
     chart= [] 
     data= []
@@ -471,9 +557,13 @@ def a_week_data(request):
     for dp in reversed(daily_price):
         chart_data = {
             '업종' : jm,
+            '대비율' : dby,
             '일자': dp['stck_bsop_date'],
+            '시가': dp['bstp_nmix_oprc'],
             '호출시간 현재가': now_jm,
             '해당일 업종 현재가': dp['bstp_nmix_prpr'],
+            '해당일 업종 최고가': dp['bstp_nmix_hgpr'],
+            '해당일 업종 최저가': dp['bstp_nmix_lwpr'],
         }
         chart.append(float(dp['bstp_nmix_prpr']))
         data.append(chart_data)
@@ -489,7 +579,7 @@ def a_week_data(request):
     operation_description='최대 100개 조회가능/ 시작일~종료일 + 현재 업종 데이터 보고 싶으면 하루만 조회해서 보세요',
     tags=['(해외)(업종)주식 데이터'],
     manual_parameters=[
-        openapi.Parameter('symbol', in_=openapi.IN_QUERY, description='업종코드(S&P500 : SPX)', type=openapi.TYPE_STRING),
+        openapi.Parameter('symbol', in_=openapi.IN_QUERY, description='업종코드(S&P500 : SPX,나스닥100:NDX)', type=openapi.TYPE_STRING),
         openapi.Parameter('start', in_=openapi.IN_QUERY, description='시작일(YYYYMMDD 형식)', type=openapi.TYPE_STRING),
         openapi.Parameter('end', in_=openapi.IN_QUERY, description='종료일(YYYYMMDD 형식)', type=openapi.TYPE_STRING),
     ],
@@ -509,22 +599,28 @@ def f_a_week_data(request):
         'appsecret': secret,
         'tr_id': 'FHKST03030100'
     }
-    url = "https://openapi.koreainvestment.com:9443/uapi/overseas-price/v1/quotations/inquire-daily-chartprice?FID_COND_MRKT_DIV_CODE=N&FID_INPUT_ISCD={}&FID_INPUT_DATE_1={}&FID_INPUT_DATE_2={}&FID_PERIOD_DIV_CODE=W".format(symbol, start, end)
-
+    url = "https://openapi.koreainvestment.com:9443/uapi/overseas-price/v1/quotations/inquire-daily-chartprice?FID_COND_MRKT_DIV_CODE=N&FID_INPUT_ISCD={}&FID_INPUT_DATE_1={}&FID_INPUT_DATE_2={}&FID_PERIOD_DIV_CODE=W".format(symbol,start,end)
     response = requests.request("GET", url, headers=headers, data=payload)
     response_data = response.json() 
-    jm = response_data['output1']['hts_kor_isnm']
+    print(response_data)
     now_jm = response_data['output1']['ovrs_nmix_prpr']
+    print(now_jm)
+    jm = response_data['output1']['hts_kor_isnm']
+    jg = response_data['output1']['ovrs_nmix_prdy_clpr']
     daily_price = response_data['output2']
-    chart= []
+    chart= [] 
     data= []
     mx = 0 ; mn = 0
     for dp in reversed(daily_price):
         chart_data = {
             '업종' : jm,
             '일자': dp['stck_bsop_date'],
+            '시가': dp['ovrs_nmix_oprc'],
+            '전일종가': jg,
             '호출시간 현재가': now_jm,
             '해당일 업종 현재가': dp['ovrs_nmix_prpr'],
+            '해당일 업종 고가': dp['ovrs_nmix_hgpr'],
+            '해당일 업종 저가': dp['ovrs_nmix_lwpr'],
         }
         print(chart_data)
         chart.append(float(dp['ovrs_nmix_prpr']))
@@ -572,6 +668,11 @@ def f_week_data(request):
         chart_data = {
             '날짜': dp['xymd'],
             '종가': dp['clos'],
+            '시가': dp['open'],
+            '등락율': dp['rate'],
+            '거래량': dp['tvol'],
+            '최고가': dp['high'],
+            '최저가': dp['low'],
         }
         chart.append(float(dp['clos']))
         data.append(chart_data)
@@ -581,6 +682,50 @@ def f_week_data(request):
     return JsonResponse({'data': data, 'lista': lista}, safe=True)
 
 #################################MINUTE#################################
+
+####원래분봉####
+@swagger_auto_schema(
+    method='get',
+    operation_id='분 별 데이터 조회',
+    operation_description='api호출한 시간 기준 30분전 부터의 데이터',
+    tags=['주식 데이터'],
+    manual_parameters=[
+        openapi.Parameter('symbol', in_=openapi.IN_QUERY, description='종목코드', type=openapi.TYPE_STRING),
+        openapi.Parameter('end', in_=openapi.IN_QUERY, description='종료시간(HHMMSS 형식)', type=openapi.TYPE_STRING)
+    ],
+)
+@api_view(['GET'])
+@authentication_classes([SessionAuthentication,BasicAuthentication])
+@permission_classes([permissions.AllowAny])
+def hmm__minute_data(request):
+    print(request)
+    symbol = request.GET.get('symbol')
+    end = request.GET.get('end')
+    result = broker._fetch_today_1m_ohlcv(symbol,end)
+    daily_price = result['output2']
+    jm = result['output1']['hts_kor_isnm'] ##종목
+    dby = result['output1']['prdy_ctrt']
+    chart= [] 
+    data= []
+    mx = 0 ; mn = 0
+    for dp in reversed(daily_price):
+        chart_data = {
+            "종목": jm,
+            '날짜': dp['stck_bsop_date'],
+            '시가': dp['stck_oprc'],
+            '현재가': dp['stck_prpr'],
+            '고가': dp['stck_hgpr'],
+            '저가': dp['stck_lwpr'],
+            '전일대비율': dby,
+        }
+        
+        chart.append(int(dp['stck_prpr']))
+        data.append(chart_data)
+        mx = max(mx,int(dp['stck_hgpr']))
+        mn = min(mn,int(dp['stck_lwpr']))
+    lista = substitution(mx,mn,chart)
+    return JsonResponse({'data': data, 'lista': lista}, safe=False)
+
 
 ####국내 종목 분 데이터####
 @swagger_auto_schema(
@@ -610,10 +755,12 @@ def minute_data(request):
         daily_price = result['output2']
         jm = result['output1']['hts_kor_isnm'] 
         nj = result['output1']['acml_vol'] 
+        dby = result['output1']['prdy_ctrt']
         for dp in reversed(daily_price):
             chart_data = {
                 "종목": jm,
                 "누적 거래량" : nj,
+                "전일 대비율" : dby,
                 '날짜': dp['stck_bsop_date'],
                 '현재가': dp['stck_prpr'],
                 '시가': dp['stck_hgpr'],
@@ -647,14 +794,19 @@ def a_minute_data(request):
     result = broker.a_fetch_today_1m_ohlcv(symbol,sec)
     daily_price = result['output2']
     jm = result['output1']['hts_kor_isnm'] ##종목
+    gr = result['output1']['acml_vol'] ##종목
     chart= [] 
     data= []
     mx = 0 ; mn = 0
     for dp in reversed(daily_price):
         chart_data = {
             "종목": jm,
+            "거래량": gr,
             '날짜': dp['stck_bsop_date'],
             '현재가': dp['stck_prpr'],
+            '시가': dp['stck_oprc'],
+            '고가': dp['stck_hgpr'],
+            '저가': dp['stck_lwpr'],
         }
         chart.append(float(dp['stck_prpr']))
         data.append(chart_data)
@@ -670,7 +822,7 @@ def a_minute_data(request):
     operation_description='최근 102건 조회가능',
     tags=['(해외)(업종)주식 데이터'],
     manual_parameters=[
-        openapi.Parameter('symbol', in_=openapi.IN_QUERY, description='업종코드(S&P500 : SPX)', type=openapi.TYPE_STRING),
+        openapi.Parameter('symbol', in_=openapi.IN_QUERY, description='업종코드(S&P500 : SPX,나스닥100:NDX)', type=openapi.TYPE_STRING),
     ],
 )
 @api_view(['GET'])
@@ -692,6 +844,7 @@ def f_a_minute_data(request):
     response = requests.request("GET", url, headers=headers, data=payload)
     response_data = response.json() 
     jm = response_data['output1']['hts_kor_isnm']
+    gr = response_data['output1']['acml_vol']
     daily_price = response_data['output2']
     chart= []
     data= []
@@ -700,7 +853,11 @@ def f_a_minute_data(request):
         chart_data = {
             '업종' : jm,
             '일자': dp['stck_bsop_date'],
+            '거래량': gr,
             '해당일 업종 현재가': dp['optn_prpr'],
+            '해당일 업종 시가': dp['optn_oprc'],
+            '해당일 업종 고가': dp['optn_hgpr'],
+            '해당일 업종 저가': dp['optn_lwpr'],
         }
         print(chart_data)
         chart.append(float(dp['optn_prpr']))
@@ -746,6 +903,9 @@ def f_minute_data(request):
             '한국기준일자': dp['kymd'],
             '한국기준시간': dp['khms'],
             '종가': dp['last'],
+            '시가': dp['open'],
+            '고가': dp['high'],
+            '저가': dp['low'],
         }
         chart.append(float(dp['last']))
         data.append(chart_data)
@@ -753,6 +913,59 @@ def f_minute_data(request):
         mn = min(mn,float(dp['low']))
     lista = substitution(mx,mn,chart)
     return JsonResponse({'data': data, 'lista': lista}, safe=False)
+
+@swagger_auto_schema(
+    method='get',
+    operation_id='(해외)현재 주가 확인 및 사용자 투자종목 업데이트',
+    operation_description='api호출한 순간의 해당종목 데이터',
+    tags=['(해외)주식 데이터'],
+    manual_parameters=[
+        openapi.Parameter('symbol', in_=openapi.IN_QUERY, description='종목코드', type=openapi.TYPE_STRING),
+    ],
+)
+@api_view(['GET'])
+@authentication_classes([SessionAuthentication,BasicAuthentication])
+@permission_classes([permissions.AllowAny])
+def f_now_data(request):
+    symbol = request.GET.get('symbol')
+    headers = {
+        'content-type': 'application/json',
+        'authorization' : broker.access_token,
+        'appkey': key,
+        'appsecret': secret,
+        'tr_id': 'HHDFS76200200',
+    }
+    f_url = "https://openapi.koreainvestment.com:9443/uapi/overseas-price/v1/quotations/price-detail?AUTH=&EXCD=NAS&SYMB={}".format(symbol)
+
+    response = requests.request("GET", f_url, headers=headers, data=f_payload)
+    response_data = response.json() 
+    daily_price = response_data['output'] 
+    data= []
+    chart_data = {
+        '거래량' : daily_price['tvol'],
+        '전일종가': daily_price['base'],
+        '현재가': daily_price['last'],
+        '고가': daily_price['high'],
+        '저가': daily_price['low'],
+        '시가': daily_price['open'],
+        '시가총액': daily_price['tomv'],
+        '등락율': daily_price['t_xrat'],
+    }
+    stock = Stock.objects.get(symbol=symbol)
+    user_stock = UserStock.objects.filter(stock=stock)
+
+    if user_stock is not None:
+        for user_stock in user_stock:
+            if user_stock.having_quantity >= 1:
+                now_stock_price=int(response_data['output']['last']) * user_stock.having_quantity
+                user_stock.profit_loss = user_stock.price - now_stock_price
+                user_stock.now_price = now_stock_price
+                user_stock.rate_profit_loss=(now_stock_price-user_stock.price)/user_stock.price*100
+                user_stock.save()
+    else:
+        pass
+    data.append(chart_data)
+    return JsonResponse({'data': data}, safe=False)
 
 ###############################TRANSACTION#################################
 
