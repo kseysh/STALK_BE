@@ -976,7 +976,7 @@ def user_info(request):
         # user = request.user
         user = User.objects.get(id=2)
         user_liked_stocks = Stock.objects.filter(liked_user=user)
-        liked_stock_data = [{'prdt_name': stock.name, 'code': stock.symbol} for stock in user_liked_stocks]
+        liked_stock_data = [{'prdt_name': stock.name, 'code': stock.symbol, 'is_domestic_stock': stock.is_domestic_stock} for stock in user_liked_stocks]
         try:
             user_stocks = UserStock.objects.filter(user=user)
             user_stock_data = UserStockSerializer(user_stocks, many=True).data
