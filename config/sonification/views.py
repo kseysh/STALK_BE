@@ -971,17 +971,6 @@ def user_info(request):
     except User.DoesNotExist:
         return Response({'error': '로그인 하세요.'}, status=403)
 
-        user_data = {
-            'username': user.username,
-            'user_nickname': user.user_nickname,
-            'user_property': user.user_property,
-        }
-        
-        return Response({'유저정보': user_data,'찜한목록': liked_stock_data,'모의투자한 종목' : user_stock_data , '거래 기록' : record_data})
-    
-    except User.DoesNotExist:
-        return Response({'error': '로그인 하세요.'}, status=404)
-
 ####매도####
 @swagger_auto_schema(
     method='post',
@@ -1188,6 +1177,8 @@ def data_to_sound(request):
 
 
 class CheckIsLike(APIView): 
+    authentication_classes = [SessionAuthentication,BasicAuthentication]
+    permission_classes = [permissions.AllowAny]
     stock_name= openapi.Parameter('stock_name', openapi.IN_QUERY, description='종목 이름', required=True, type=openapi.TYPE_STRING)
     @swagger_auto_schema(tags=['좋아요가 눌려져 있는 주식인지 확인하는 기능'],manual_parameters=[stock_name], responses={200: 'Success'})
     def get(self, request):
