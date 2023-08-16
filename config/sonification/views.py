@@ -1,9 +1,6 @@
-import base64
 import requests
-import json
 from io import BytesIO
-import os
-from django.conf import settings
+from django.db import IntegrityError
 import numpy as np
 from scipy.io import wavfile
 import mojito
@@ -15,6 +12,7 @@ from rest_framework.response import Response
 from .serializers import StockSerializer, RecordSerializer, UserStockSerializer
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.authentication import SessionAuthentication, BasicAuthentication
@@ -22,7 +20,6 @@ from rest_framework.decorators import api_view, authentication_classes, permissi
 from rest_framework import permissions 
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg.openapi import Schema, TYPE_ARRAY, TYPE_NUMBER
-from rest_framework.parsers import MultiPartParser
 
 f = open("./koreainvestment.key")
 lines = f.readlines()
@@ -96,7 +93,24 @@ def transaction_rank(request):
             '전일 대비율': item['prdy_ctrt'],
             '누적 거래량': item['acml_vol'],
         }
-        transaction_data_list.append(data)
+        stock, created = Stock.objects.get_or_create(
+            symbol=item['code'],
+            name=item['name'],
+            likes=0,
+            )
+        try:
+            if created:
+                like=0
+                data['좋아요 개수'] = like
+                transaction_data_list.append(data)
+            else: 
+                like=stock.likes
+                data['좋아요 개수'] = like
+                transaction_data_list.append(data)
+        except IntegrityError:
+            like=stock.likes
+            data['좋아요 개수'] = like
+            pass
 
     
     return Response({'거래량 순위': transaction_data_list})
@@ -581,14 +595,31 @@ def data_to_sound(request):
 @permission_classes([permissions.AllowAny])
 def my_stocks(request):
     try:
-        user = request.user
-        user_records = user.records.all()
-        user_stock = UserStock.objects.get(user=user)
-        user_stock_data = UserStockSerializer(user_stock).data
-        record_data = RecordSerializer(user_records, many=True).data
-        return Response({'user_stock_data' : user_stock_data , 'record_data' : record_data})
+        # user = request.user
+        user = User.objects.get(id=2)
+        user_liked_stocks = Stock.objects.filter(liked_user=user)
+        liked_stock_data = [{'prdt_name': stock.name, 'code': stock.symbol} for stock in user_liked_stocks]
+        try:
+            user_stocks = UserStock.objects.filter(user=user)
+            user_stock_data = UserStockSerializer(user_stocks, many=True).data
+        except UserStock.DoesNotExist:
+            user_stock_data = None
+        try:
+            record = Record.objects.filter(user=user)
+            record_data = RecordSerializer(record, many=True).data
+        except Record.DoesNotExist:
+            record_data = None
+
+        user_data = {
+            'username': user.username,
+            'user_nickname': user.user_nickname,
+            'user_property': user.user_property,
+        }
+        
+        return Response({'유저정보': user_data,'찜한목록': liked_stock_data,'모의투자한 종목' : user_stock_data , '거래 기록' : record_data})
+    
     except User.DoesNotExist:
-        return Response({'error': '없는 유저입니다'}, status=404)
+        return Response({'error': '로그인 하세요.'}, status=403)
 
 @swagger_auto_schema(
     method='post',
@@ -787,9 +818,8 @@ def data_to_sound(request):
 class CheckIsLike(APIView): 
     stock_name= openapi.Parameter('stock_name', openapi.IN_QUERY, description='종목 이름', required=True, type=openapi.TYPE_STRING)
     @swagger_auto_schema(tags=['좋아요가 눌려져 있는 주식인지 확인하는 기능'],manual_parameters=[stock_name], responses={200: 'Success'})
-    def get(request):
-        # user, _ = JWTAuthentication().authenticate(request) # 이게 안되면 check_jwt_user를 통해 user정보를 받아서 user_id를 사용하기
-        user = User.objects.get(id = 2)
+    def get(self, request):
+        user = User.objects.get(id=2) # 나중에 변경하기
         stock_name = request.GET.get("stock_name")
         stock = Stock.objects.get(symbol=stock_name)
         if user in stock.liked_user.all():
