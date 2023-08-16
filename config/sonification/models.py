@@ -7,8 +7,9 @@ from accounts.models import User
 class Stock(models.Model):
     symbol = models.CharField(max_length=10, unique=True)
     name = models.CharField(max_length=100) 
-    likes = models.IntegerField()
+    likes = models.IntegerField(default=0)
     liked_user = models.ManyToManyField(User, related_name="liked_stock", blank=True)
+    is_domestic_stock = models.BooleanField(default=True)
     def __str__(self):
         return self.name
 

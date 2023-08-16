@@ -1,9 +1,5 @@
 from .views import *
 from django.urls import path
-from django.urls import re_path
-from rest_framework import permissions
-from drf_yasg.views import get_schema_view
-from drf_yasg import openapi
 
 urlpatterns = [
     path('transaction_rank/',transaction_rank, name='transaction_rank'),
@@ -30,4 +26,5 @@ urlpatterns = [
     path('speech_to_text/', speech_to_text, name='speech_to_text'),
     path('like_stock/', like_stock, name='like_stock'),
     path('checkislike/',CheckIsLike.as_view()),
+    path('createstockdatabase/',create_stock_database),
 ]

@@ -84,6 +84,7 @@ def f_transaction_rank(request):
     response = requests.get(url, headers=headers)
     response_data = response.json() 
     transaction_data_list = []
+    exchange_rate = get_exchange_rate()
     for item in response_data['output2']:
         data = {
             '종목명': item['name'],
@@ -93,24 +94,18 @@ def f_transaction_rank(request):
             '현재가': float(item['last']),
             '전일 대비율': float(item['rate']),
             '대비': float(item['diff']),
+            '환율':exchange_rate,
         }
         try:
-            stock, created = Stock.objects.get_or_create(
+            stock = Stock.objects.get(
             symbol=item['symb'],
             name=item['name'],
-            likes=0,
             )
-            if created:
-                like=0
-                data['좋아요 개수'] = like
-                transaction_data_list.append(data)
-            else: 
-                like=stock.likes
-                data['좋아요 개수'] = like
-                transaction_data_list.append(data)
-        except IntegrityError:
             like=stock.likes
             data['좋아요 개수'] = like
+            transaction_data_list.append(data)
+        except IntegrityError:
+            data['좋아요 개수'] = 0
             pass
 
     return Response({'시가총액 순위': transaction_data_list})
@@ -127,16 +122,18 @@ def f_transaction_rank(request):
 @permission_classes([permissions.AllowAny])
 def transaction_rank(request):
     headers = {
-        'content-type': 'application/json',
+        'content-type': 'application/json; charset=utf-8',
         'authorization' : broker.access_token,
         'appkey': key,
         'appsecret': secret,
-        'tr_id': 'HHKST03900400'
+        'tr_id': 'HHKST03900400',
+        'custtype':'P',
     }
     url = "https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/psearch-result?user_id=@2108665&seq=0"
     response = requests.get(url, headers=headers)
     response_data = response.json() 
     transaction_data_list = []
+    print(response_data)
     for item in response_data['output2']:
         data = {
             '종목명': item['name'],
@@ -147,22 +144,15 @@ def transaction_rank(request):
             '대비': float(item['change']),
         }
         try:
-            stock, created = Stock.objects.get_or_create(
+            stock = Stock.objects.get(
             symbol=item['code'],
             name=item['name'],
-            likes=0,
             )
-            if created:
-                like=0
-                data['좋아요 개수'] = like
-                transaction_data_list.append(data)
-            else: 
-                like=stock.likes
-                data['좋아요 개수'] = like
-                transaction_data_list.append(data)
-        except IntegrityError:
             like=stock.likes
             data['좋아요 개수'] = like
+            transaction_data_list.append(data)
+        except IntegrityError:
+            data['좋아요 개수'] = 0
             pass
 
     return Response({'시가총액 순위': transaction_data_list})
@@ -290,7 +280,7 @@ def a_day_data(request):
         'appsecret': secret,
         'tr_id': 'FHKUP03500100'
     }
-    url = "https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-daily-indexchartprice?fid_cond_mrkt_div_code=U&fid_input_iscd={}&fid_input_date_1={}&fid_input_date_2={}&fid_period_div_code=D".format(symbol, start, end)
+    url = "https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-daily-indexchartprice?FID_COND_MRKT_DIV_CODE=U&fid_input_iscd={}&fid_input_date_1={}&fid_input_date_2={}&fid_period_div_code=D".format(symbol, start, end)
 
     response = requests.request("GET", url, headers=headers, data=payload)
     response_data = response.json() 
@@ -357,6 +347,7 @@ def f_a_day_data(request):
     chart= [] 
     data= []
     mx = 0 ; mn = 0
+    exchange_rate = get_exchange_rate()
     for dp in reversed(daily_price):
         chart_data = {
             '업종' : jm,
@@ -367,6 +358,7 @@ def f_a_day_data(request):
             '해당일 업종 현재가': dp['ovrs_nmix_prpr'],
             '해당일 업종 고가': dp['ovrs_nmix_hgpr'],
             '해당일 업종 저가': dp['ovrs_nmix_lwpr'],
+            '환율':exchange_rate,
         }
         print(chart_data)
         chart.append(float(dp['ovrs_nmix_prpr']))
@@ -410,6 +402,7 @@ def f_day_data(request):
     chart= []
     data=[]
     mx = 0 ; mn = 0
+    exchange_rate = get_exchange_rate()
     for dp in reversed(daily_price):
         chart_data = {
             '날짜': dp['xymd'],
@@ -418,6 +411,7 @@ def f_day_data(request):
             '고가': dp['high'],
             '저가': dp['low'],
             '거래량': dp['tvol'],
+            '환율':exchange_rate,
         }
         chart.append(float(dp['clos']))
         data.append(chart_data)
@@ -509,7 +503,7 @@ def a_week_data(request):
         'appsecret': secret,
         'tr_id': 'FHKUP03500100',
     }
-    url = "https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-daily-indexchartprice?fid_cond_mrkt_div_code=U&fid_input_iscd={}&fid_input_date_1={}&fid_input_date_2={}&fid_period_div_code=W".format(symbol, start, end)
+    url = "https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-daily-indexchartprice?FID_COND_MRKT_DIV_CODE=U&FID_INPUT_ISCD={}&FID_INPUT_DATE_1={}&FID_INPUT_DATE_2={}&FID_PERIOD_DIV_CODE=W".format(symbol, start, end)
 
     response = requests.request("GET", url, headers=headers, data=payload)
     response_data = response.json() 
@@ -596,6 +590,31 @@ def f_a_week_data(request):
     lista = substitution(mx,mn,chart)
     return JsonResponse({'data': data, 'lista': lista}, safe=False)
 
+
+# @swagger_auto_schema(
+#     method='get',
+#     operation_id='환율 반환',
+#     operation_description='환율 반환',
+#     tags=['환율'],
+# )
+# @api_view(['GET'])
+def get_exchange_rate():
+    payload=""
+    headers = {
+        'content-type': 'application/json; charset=utf-8',
+        'authorization' : broker.access_token,
+        'appkey': key,
+        'appsecret': secret,
+        'tr_id': 'HHDFS76200200',
+        'custtype':'P',
+    }
+    url = "https://openapi.koreainvestment.com:9443/uapi/overseas-price/v1/quotations/price-detail?AUTH=&EXCD=NAS&SYMB=TSLA"#AUTH는 아무 값도 안들어가는 것이 맞나요?
+
+    response = requests.request("GET", url, headers=headers, data=payload)
+    response_data = response.json() 
+    exchange_rate = response_data['output']['t_rate']
+    return exchange_rate
+
 ####주 단위 종목 데이터 해외####
 @swagger_auto_schema(
     method='get',
@@ -630,6 +649,7 @@ def f_week_data(request):
     chart= []
     data=[]
     mx = 0 ; mn = 0
+    exchange_rate = get_exchange_rate()
     for dp in reversed(daily_price):
         chart_data = {
             '날짜': dp['xymd'],
@@ -639,6 +659,7 @@ def f_week_data(request):
             '거래량': dp['tvol'],
             '최고가': dp['high'],
             '최저가': dp['low'],
+            '환율':exchange_rate,
         }
         chart.append(float(dp['clos']))
         data.append(chart_data)
@@ -815,6 +836,7 @@ def f_a_minute_data(request):
     chart= []
     data= []
     mx = 0 ; mn = 0
+    exchange_rate = get_exchange_rate()
     for dp in reversed(daily_price):
         chart_data = {
             '업종' : jm,
@@ -824,6 +846,7 @@ def f_a_minute_data(request):
             '해당일 업종 시가': dp['optn_oprc'],
             '해당일 업종 고가': dp['optn_hgpr'],
             '해당일 업종 저가': dp['optn_lwpr'],
+            '환율':exchange_rate,
         }
         print(chart_data)
         chart.append(float(dp['optn_prpr']))
@@ -864,6 +887,7 @@ def f_minute_data(request):
     chart= [] 
     data= []
     mx = 0 ; mn = 0
+    exchange_rate = get_exchange_rate()
     for dp in reversed(daily_price):
         chart_data = {
             '한국기준일자': dp['kymd'],
@@ -872,6 +896,7 @@ def f_minute_data(request):
             '시가': dp['open'],
             '고가': dp['high'],
             '저가': dp['low'],
+            '환율':exchange_rate,
         }
         chart.append(float(dp['last']))
         data.append(chart_data)
@@ -906,6 +931,8 @@ def f_now_data(request):
     response = requests.request("GET", f_url, headers=headers, data=f_payload)
     response_data = response.json() 
     daily_price = response_data['output'] 
+    exchange_rate = get_exchange_rate()
+
     chart_data = {
         '거래량' : daily_price['tvol'],
         '전일종가': daily_price['base'],
@@ -915,6 +942,7 @@ def f_now_data(request):
         '시가': daily_price['open'],
         '시가총액': daily_price['tomv'],
         '등락율': daily_price['t_xrat'],
+        '환율':exchange_rate,
     }
     stock = Stock.objects.get(symbol=symbol)
     user_stock = UserStock.objects.filter(stock=stock)
@@ -948,10 +976,10 @@ def user_info(request):
         # user = request.user
         user = User.objects.get(id=2)
         user_liked_stocks = Stock.objects.filter(liked_user=user)
-        liked_stock_data = [{'prdt_name': stock.name, 'code': stock.symbol} for stock in user_liked_stocks]
+        liked_stock_data = [{'prdt_name': stock.name, 'code': stock.symbol, 'is_domestic_stock': stock.is_domestic_stock} for stock in user_liked_stocks]
         try:
-            user_stock = UserStock.objects.get(user=user)
-            user_stock_data = UserStockSerializer(user_stock).data
+            user_stocks = UserStock.objects.filter(user=user)
+            user_stock_data = UserStockSerializer(user_stocks, many=True).data
         except UserStock.DoesNotExist:
             user_stock_data = None
         try:
@@ -969,7 +997,7 @@ def user_info(request):
         return Response({'유저정보': user_data,'찜한목록': liked_stock_data,'모의투자한 종목' : user_stock_data , '거래 기록' : record_data})
     
     except User.DoesNotExist:
-        return Response({'error': '로그인 하세요.'}, status=404)
+        return Response({'error': '로그인 하세요.'}, status=403)
 
 ####매도####
 @swagger_auto_schema(
@@ -1179,12 +1207,12 @@ def data_to_sound(request):
 class CheckIsLike(APIView): 
     authentication_classes = [SessionAuthentication,BasicAuthentication]
     permission_classes = [permissions.AllowAny]
-    stock_name= openapi.Parameter('stock_name', openapi.IN_QUERY, description='stock_name', required=True, type=openapi.TYPE_STRING)
+    stock_name= openapi.Parameter('stock_name', openapi.IN_QUERY, description='종목 이름', required=True, type=openapi.TYPE_STRING)
     @swagger_auto_schema(tags=['좋아요가 눌려져 있는 주식인지 확인하는 기능'],manual_parameters=[stock_name], responses={200: 'Success'})
-    def get(request):
-        user, _ = JWTAuthentication().authenticate(request) # 이게 안되면 check_jwt_user를 통해 user정보를 받아서 user_id를 사용하기
+    def get(self, request):
+        user = User.objects.get(id=2) # 나중에 변경하기
         stock_name = request.GET.get("stock_name")
-        stock = Stock.objects.get(stock_name=stock_name)
+        stock = Stock.objects.get(symbol=stock_name)
         if user in stock.liked_user.all():
             return Response({'message': True}, status=200)
         else:
@@ -1216,12 +1244,13 @@ def speech_to_text(request):
     Lang = "Kor" # Kor / Jpn / Chn / Eng
     URL = "https://naveropenapi.apigw.ntruss.com/recog/v1/stt?lang=" + Lang
         
-    ID = "qcxc89t0bs" 
+    ID = "qcxc89t0bs" # 인증 정보의 Client ID
+    Secret = "vgU8vBup9zR8gFURTxisFeOHDhgfKNuxe2V8GraT" # 인증 정보의 Client Secret
         
     headers = {
         "Content-Type": "application/octet-stream", # Fix
         "X-NCP-APIGW-API-KEY-ID": ID,
-        "X-NCP-APIGW-API-KEY": sound_secret,
+        "X-NCP-APIGW-API-KEY": Secret,
     }
     audio_file = request.FILES.get('audio')
 
@@ -1229,3 +1258,103 @@ def speech_to_text(request):
     rescode = response.status_code
     if rescode == 200:
         return Response(response.text)
+
+
+
+
+@swagger_auto_schema(
+    method='get',
+    operation_id='초기 데이터베이스 설정',
+    operation_description='국내/해외 시총 100개씩 데이터베이스에 생성',
+    tags=['데이터베이스 설정']
+)
+@api_view(['GET'])
+@authentication_classes([SessionAuthentication,BasicAuthentication])
+@permission_classes([permissions.AllowAny])
+def create_stock_database(request):
+    ## 국내 주식 시총기준 100위 데이터베이스 생성 ##
+    headers = {
+        'content-type': 'application/json; charset=utf-8',
+        'authorization' : broker.access_token,
+        'appkey': key,
+        'appsecret': secret,
+        'tr_id': 'HHKST03900400'
+    }
+    url = "https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/psearch-result?user_id=@2108665&seq=0"
+    response = requests.get(url, headers=headers)
+    response_data = response.json() 
+    transaction_data_list = []
+    for item in response_data['output2']:
+        data = {
+            '종목명': item['name'],
+            '종목코드': item['code'],
+            '시가총액' : float(item['stotprice']),
+            '현재가':float(item['price']),
+            '전일 대비율': float(item['chgrate']),
+            '대비': float(item['change']),
+        }
+        stock, created = Stock.objects.get_or_create(
+            symbol=item['code'],
+            name=item['name'],
+            is_domestic_stock = True,
+            )
+        try:
+            if created:
+                like=0
+                data['좋아요 개수'] = like
+                transaction_data_list.append(data)
+            else: 
+                like=stock.likes
+                data['좋아요 개수'] = like
+                transaction_data_list.append(data)
+        except IntegrityError:
+            like=stock.likes
+            data['좋아요 개수'] = like
+            pass
+
+    ## 해외 주식 시총기준 100위 데이터베이스 생성 ##
+    headers = {
+        'content-type': 'application/json',
+        'authorization' : broker.access_token,
+        'appkey': key,
+        'appsecret': secret,
+        'tr_id': 'HHDFS76410000',
+    }
+    url = "https://openapi.koreainvestment.com:9443/uapi/overseas-price/v1/quotations/inquire-search?AUTH=&EXCD=NAS&CO_YN_PRICECUR=&CO_ST_PRICECUR=&CO_EN_PRICECUR=&CO_YN_RATE=&CO_ST_RATE=&CO_EN_RATE=&CO_YN_VALX=1&CO_ST_VALX=0&CO_EN_VALX=100000000000000&CO_YN_SHAR=&CO_ST_SHAR=&CO_EN_SHAR=&CO_YN_VOLUME=&CO_ST_VOLUME=&CO_YN_AMT=&CO_EN_VOLUME=&CO_ST_AMT=&CO_EN_AMT=&CO_YN_EPS=&CO_ST_EPS=&CO_EN_EPS=&CO_YN_PER=&CO_ST_PER=&CO_EN_PER="
+    response = requests.get(url, headers=headers)
+    response_data = response.json() 
+    f_transaction_data_list = []
+    exchange_rate = get_exchange_rate()
+    for item in response_data['output2']:
+        data = {
+            '종목명': item['name'],
+            '종목코드': item['symb'],
+            '시가총액 순위': item['rank'],
+            '시가총액' : float(item['valx']),
+            '현재가': float(item['last']),
+            '전일 대비율': float(item['rate']),
+            '대비': float(item['diff']),
+            '환율':exchange_rate,
+        }
+        try:
+            stock, created = Stock.objects.get_or_create(
+            symbol=item['symb'],
+            name=item['name'],
+            is_domestic_stock = False,
+            )
+            if created:
+                like=0
+                data['좋아요 개수'] = like
+                f_transaction_data_list.append(data)
+            else: 
+                like=stock.likes
+                data['좋아요 개수'] = like
+                f_transaction_data_list.append(data)
+        except IntegrityError:
+            like=stock.likes
+            data['좋아요 개수'] = like
+            pass
+        
+
+    return Response({'국내 시가총액 순위': transaction_data_list,
+                     '해외 시가총액 순위': f_transaction_data_list,})
