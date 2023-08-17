@@ -10,7 +10,6 @@ from rest_framework.authentication import SessionAuthentication, BasicAuthentica
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework import permissions 
 from rest_framework_simplejwt.authentication import JWTAuthentication
-
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
@@ -84,7 +83,7 @@ def f_transaction_rank(request):
     response = requests.get(url, headers=headers)
     response_data = response.json() 
     transaction_data_list = []
-    exchange_rate = get_exchange_rate()
+    exchange_rate = get_exchange_rate(request)
     for item in response_data['output2']:
         data = {
             '종목명': item['name'],
@@ -92,6 +91,7 @@ def f_transaction_rank(request):
             '시가총액 순위': item['rank'],
             '시가총액' : float(item['valx']),
             '현재가': float(item['last']),
+            '$현재가': int(float(item['last'])*float(exchange_rate)),
             '전일 대비율': float(item['rate']),
             '대비': float(item['diff']),
             '환율':exchange_rate,
@@ -347,7 +347,7 @@ def f_a_day_data(request):
     chart= [] 
     data= []
     mx = 0 ; mn = 0
-    exchange_rate = get_exchange_rate()
+    exchange_rate = get_exchange_rate(request)
     for dp in reversed(daily_price):
         chart_data = {
             '업종' : jm,
@@ -402,7 +402,7 @@ def f_day_data(request):
     chart= []
     data=[]
     mx = 0 ; mn = 0
-    exchange_rate = get_exchange_rate()
+    exchange_rate = get_exchange_rate(request)
     for dp in reversed(daily_price):
         chart_data = {
             '날짜': dp['xymd'],
@@ -591,14 +591,8 @@ def f_a_week_data(request):
     return JsonResponse({'data': data, 'lista': lista}, safe=False)
 
 
-# @swagger_auto_schema(
-#     method='get',
-#     operation_id='환율 반환',
-#     operation_description='환율 반환',
-#     tags=['환율'],
-# )
-# @api_view(['GET'])
-def get_exchange_rate():
+def get_exchange_rate(request):
+    print("a")
     payload=""
     headers = {
         'content-type': 'application/json; charset=utf-8',
@@ -606,10 +600,8 @@ def get_exchange_rate():
         'appkey': key,
         'appsecret': secret,
         'tr_id': 'HHDFS76200200',
-        'custtype':'P',
     }
-    url = "https://openapi.koreainvestment.com:9443/uapi/overseas-price/v1/quotations/price-detail?AUTH=&EXCD=NAS&SYMB=TSLA"#AUTH는 아무 값도 안들어가는 것이 맞나요?
-
+    url = "https://openapi.koreainvestment.com:9443/uapi/overseas-price/v1/quotations/price-detail?AUTH=&EXCD=NAS&SYMB=AAPL"#AUTH는 아무 값도 안들어가는 것이 맞나요?
     response = requests.request("GET", url, headers=headers, data=payload)
     response_data = response.json() 
     exchange_rate = response_data['output']['t_rate']
@@ -649,7 +641,7 @@ def f_week_data(request):
     chart= []
     data=[]
     mx = 0 ; mn = 0
-    exchange_rate = get_exchange_rate()
+    exchange_rate = get_exchange_rate(request)
     for dp in reversed(daily_price):
         chart_data = {
             '날짜': dp['xymd'],
@@ -836,7 +828,7 @@ def f_a_minute_data(request):
     chart= []
     data= []
     mx = 0 ; mn = 0
-    exchange_rate = get_exchange_rate()
+    exchange_rate = get_exchange_rate(request)
     for dp in reversed(daily_price):
         chart_data = {
             '업종' : jm,
@@ -887,7 +879,7 @@ def f_minute_data(request):
     chart= [] 
     data= []
     mx = 0 ; mn = 0
-    exchange_rate = get_exchange_rate()
+    exchange_rate = get_exchange_rate(request)
     for dp in reversed(daily_price):
         chart_data = {
             '한국기준일자': dp['kymd'],
@@ -931,18 +923,20 @@ def f_now_data(request):
     response = requests.request("GET", f_url, headers=headers, data=f_payload)
     response_data = response.json() 
     daily_price = response_data['output'] 
-    exchange_rate = get_exchange_rate()
 
     chart_data = {
         '거래량' : daily_price['tvol'],
         '전일종가': daily_price['base'],
-        '현재가': daily_price['last'],
+        '$현재가': daily_price['last'],
+        '₩현재가': int(float(daily_price['last'])*float(daily_price['t_rate'])),
         '고가': daily_price['high'],
         '저가': daily_price['low'],
         '시가': daily_price['open'],
         '시가총액': daily_price['tomv'],
         '등락율': daily_price['t_xrat'],
-        '환율':exchange_rate,
+        '환율':daily_price['t_rate'],
+        '전일 환율':daily_price['p_rate'],
+        
     }
     stock = Stock.objects.get(symbol=symbol)
     user_stock = UserStock.objects.filter(stock=stock)
@@ -950,7 +944,7 @@ def f_now_data(request):
     if user_stock is not None:
         for user_stock in user_stock:
             if user_stock.having_quantity >= 1:
-                now_stock_price=float(response_data['output']['last']) * user_stock.having_quantity
+                now_stock_price=int(float(daily_price['last'])*float(daily_price['t_rate'])) * user_stock.having_quantity
                 user_stock.profit_loss = user_stock.price - now_stock_price
                 user_stock.now_price = now_stock_price
                 user_stock.rate_profit_loss=(now_stock_price-user_stock.price)/user_stock.price*100
@@ -1020,10 +1014,22 @@ def user_info(request):
 def sell(request):
     stock_symbol = request.data.get('stock_symbol')
     quantity = request.data.get('quantity')
-    resp = broker.fetch_price(stock_symbol)
-    to_price = int(resp['output']['stck_prpr'])*quantity
+    exchange_rate = get_exchange_rate(request)
+    if stock_symbol.isdigit(): #숫자일때, 국내
+        resp = broker.fetch_price(stock_symbol)
+        to_price = int(resp['output']['stck_prpr'])*quantity
+    else: #문자일때, 해외
+        broker = mojito.KoreaInvestment(
+            api_key=key,
+            api_secret=secret,
+            acc_no=acc_no,
+            exchange="나스닥",
+            mock=True
+        )
+        resp = broker.fetch_oversea_price(stock_symbol)
+        to_price = int(float((resp['output']['last']))*float(exchange_rate))*quantity
     # user = request.user
-    user = User.objects.get(id=2)
+    user = User.objects.get(id=1)
     if(quantity<=0):
         return Response({"error": "양수값을 넣어라"})
     try:
@@ -1080,11 +1086,23 @@ def sell(request):
 def buy(request):
     stock_symbol = request.data.get('stock_symbol')
     quantity = request.data.get('quantity')
-    resp = broker.fetch_price(stock_symbol)
-    to_price = int(resp['output']['stck_prpr'])*quantity
-
+    exchange_rate = get_exchange_rate(request)
+    if stock_symbol.isdigit(): #숫자일때, 국내
+        resp = broker.fetch_price(stock_symbol)
+        to_price = int(float(resp['output']['stck_prpr']))*quantity
+    else: #문자일때, 해외
+        broker = mojito.KoreaInvestment(
+            api_key=key,
+            api_secret=secret,
+            acc_no=acc_no,
+            exchange="나스닥",
+            mock=True
+        )
+        print("a")
+        resp = broker.fetch_oversea_price(stock_symbol)
+        to_price = int(float(resp['output']['last'])*float(exchange_rate))*quantity
     # user = request.user
-    user = User.objects.get(id=2)
+    user = User.objects.get(id=1)
     if(quantity<=0):
         return Response({"error": "양수값을 넣어라"})
     try:
@@ -1318,7 +1336,7 @@ def create_stock_database(request):
     response = requests.get(url, headers=headers)
     response_data = response.json() 
     f_transaction_data_list = []
-    exchange_rate = get_exchange_rate()
+    exchange_rate = get_exchange_rate(request)
     for item in response_data['output2']:
         data = {
             '종목명': item['name'],
