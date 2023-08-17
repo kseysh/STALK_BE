@@ -171,4 +171,8 @@ def temp_user_login(request):
     res.set_cookie("refreshToken", value=refresh_token, max_age=None, expires=None, secure=True, samesite="None",httponly=True)
     return res
 
-
+@api_view(['GET'])
+def winner_winner_chicken_dinner(request):
+    users = User.objects.order_by('user_property')
+    serializer = UserSerializer(users,many=True)
+    return Response(serializer.data, status=200)
