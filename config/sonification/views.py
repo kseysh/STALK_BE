@@ -1293,23 +1293,17 @@ def create_stock_database(request):
             '전일 대비율': float(item['chgrate']),
             '대비': float(item['change']),
         }
-        stock, created = Stock.objects.get_or_create(
+        stock= Stock.objects.create(
             symbol=item['code'],
             name=item['name'],
             is_domestic_stock = True,
             )
         try:
-            if created:
-                like=0
-                data['좋아요 개수'] = like
-                transaction_data_list.append(data)
-            else: 
-                like=stock.likes
-                data['좋아요 개수'] = like
-                transaction_data_list.append(data)
-        except IntegrityError:
             like=stock.likes
             data['좋아요 개수'] = like
+            transaction_data_list.append(data)
+        except IntegrityError:
+            data['좋아요 개수'] = 0
             pass
 
     ## 해외 주식 시총기준 100위 데이터베이스 생성 ##
@@ -1337,22 +1331,17 @@ def create_stock_database(request):
             '환율':exchange_rate,
         }
         try:
-            stock, created = Stock.objects.get_or_create(
+            stock = Stock.objects.create(
             symbol=item['symb'],
             name=item['name'],
             is_domestic_stock = False,
             )
-            if created:
-                like=0
-                data['좋아요 개수'] = like
-                f_transaction_data_list.append(data)
-            else: 
-                like=stock.likes
-                data['좋아요 개수'] = like
-                f_transaction_data_list.append(data)
-        except IntegrityError:
-            like=stock.likes
+            like=0
             data['좋아요 개수'] = like
+            f_transaction_data_list.append(data)
+
+        except IntegrityError:
+            data['좋아요 개수'] = 0
             pass
         
 
