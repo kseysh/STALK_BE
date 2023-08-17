@@ -2,18 +2,18 @@ import requests, jwt
 
 from django.shortcuts import redirect
 from django.conf import settings
-from django.shortcuts import get_object_or_404
 from django.http import JsonResponse
 
 from rest_framework import status,permissions 
 from rest_framework.response import Response
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenRefreshSerializer
-from rest_framework.authentication import SessionAuthentication, BasicAuthentication
-from rest_framework.decorators import api_view,permission_classes,authentication_classes
+from rest_framework.decorators import api_view,permission_classes
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from .models import User
+from sonification.models import Stock, Record, UserStock
 from .serializers import UserSerializer
+from sonification.serializers import RecordSerializer, UserStockSerializer
 
 
 # BASE_URL = 'https://stalksound.store/'
@@ -176,3 +176,34 @@ def winner_winner_chicken_dinner(request):
     users = User.objects.order_by('user_property')
     serializer = UserSerializer(users,many=True)
     return Response(serializer.data, status=200)
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def user_info(request):
+    try:
+        user = request.user
+        # user = User.objects.get(id=2)
+        user_liked_stocks = Stock.objects.filter(liked_user=user)
+        liked_stock_data = [{'prdt_name': stock.name, 'code': stock.symbol, 'is_domestic_stock': stock.is_domestic_stock} for stock in user_liked_stocks]
+        try:
+            user_stocks = UserStock.objects.filter(user=user)
+            user_stock_data = UserStockSerializer(user_stocks, many=True).data
+        except UserStock.DoesNotExist:
+            user_stock_data = None
+        try:
+            record = Record.objects.filter(user=user)
+            record_data = RecordSerializer(record, many=True).data
+        except Record.DoesNotExist:
+            record_data = None
+
+        user_data = {
+            'username': user.username,
+            'user_nickname': user.user_nickname,
+            'user_property': user.user_property,
+        }
+        
+        return Response({'유저정보': user_data,'찜한목록': liked_stock_data,'모의투자한 종목' : user_stock_data , '거래 기록' : record_data})
+    
+    except User.DoesNotExist:
+        return Response({'error': '로그인 하세요.'}, status=403)

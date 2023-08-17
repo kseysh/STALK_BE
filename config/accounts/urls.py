@@ -10,5 +10,6 @@ urlpatterns = [
     path('tempuserlogin/',views.temp_user_login),
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    path('winner_winner_chicken_dinner',views.winner_winner_chicken_dinner)
+    path('winner_winner_chicken_dinner',views.winner_winner_chicken_dinner),
+    path('userinfo/',views.user_info),
 ]

@@ -1,7 +1,7 @@
 from django.db import IntegrityError
 from django.core.exceptions import ObjectDoesNotExist
-import requests
-import mojito
+from django.conf import settings
+import requests, mojito, os
 import numpy as np
 
 from rest_framework.response import Response
@@ -70,8 +70,6 @@ f_payload = ""
     tags=['(해외)주식 데이터']
 )
 @api_view(['GET'])
-@authentication_classes([SessionAuthentication,BasicAuthentication])
-@permission_classes([permissions.AllowAny])
 def f_transaction_rank(request):
     headers = {
         'content-type': 'application/json',
@@ -85,7 +83,13 @@ def f_transaction_rank(request):
     response_data = response.json() 
     transaction_data_list = []
     exchange_rate = get_exchange_rate(request)
+    
     for item in response_data['output2']:
+        image_path = os.path.join(settings.MEDIA_ROOT, f'{item["symb"]}.jpg')
+        if os.path.exists(image_path) or os.path.isfile(image_path):
+            image_url = f'https://stalksound.store/image/{item["symb"]}.jpg'
+        else:
+            image_url = 'https://stalksound.store/image/default.jpg'
         data = {
             '종목명': item['name'],
             '종목코드': item['symb'],
@@ -96,7 +100,7 @@ def f_transaction_rank(request):
             '전일 대비율': float(item['rate']),
             '대비': float(item['diff']),
             '환율':exchange_rate,
-            '이미지URL': f'/static/images/{item["symb"]}.jpg'
+            '이미지URL': image_url
         }
         try:
             stock = Stock.objects.get(
@@ -130,8 +134,6 @@ def f_transaction_rank(request):
     tags=['주식 데이터']
 )
 @api_view(['GET'])
-@authentication_classes([SessionAuthentication,BasicAuthentication])
-@permission_classes([permissions.AllowAny])
 def transaction_rank(request):
     headers = {
         'content-type': 'application/json; charset=utf-8',
@@ -145,8 +147,12 @@ def transaction_rank(request):
     response = requests.get(url, headers=headers)
     response_data = response.json() 
     transaction_data_list = []
-    print(response_data)
     for item in response_data['output2']:
+        image_path = os.path.join(settings.MEDIA_ROOT, f'{item["code"]}.jpg')
+        if os.path.exists(image_path) or os.path.isfile(image_path):
+            image_url = f'https://stalksound.store/image/{item["code"]}.jpg'
+        else:
+            image_url = 'https://stalksound.store/image/default.jpg'
         data = {
             '종목명': item['name'],
             '종목코드': item['code'],
@@ -154,7 +160,7 @@ def transaction_rank(request):
             '현재가':float(item['price']),
             '전일 대비율': float(item['chgrate']),
             '대비': float(item['change']),
-            '이미지URL': f'/static/images/{item["code"]}.jpg'
+            '이미지URL': f'https://stalksound.store/image/{item["code"]}.jpg'
         }
         try:
             stock = Stock.objects.get(
@@ -190,11 +196,15 @@ def transaction_rank(request):
     ],
 )
 @api_view(['GET'])
-@authentication_classes([SessionAuthentication,BasicAuthentication])
-@permission_classes([permissions.AllowAny])
 def now_data(request):
     symbol = request.GET.get('symbol')
     resp = broker.fetch_price(symbol)
+    image_path = os.path.join(settings.MEDIA_ROOT, f'{symbol}.jpg')
+    if os.path.exists(image_path) or os.path.isfile(image_path):
+        image_url = f'https://stalksound.store/image/{symbol}.jpg'
+    else:
+        image_url = 'https://stalksound.store/image/default.jpg'
+
     chart_data = { 
         '전일대비부호': resp['output']['prdy_vrss_sign'],
         '전일 대비율': resp['output']['prdy_ctrt'],
@@ -203,7 +213,8 @@ def now_data(request):
         '시가': resp['output']['stck_oprc'],
         '현재가': resp['output']['stck_prpr'],
         '고가': resp['output']['stck_hgpr'],
-        '저가': resp['output']['stck_lwpr']
+        '저가': resp['output']['stck_lwpr'],
+        '이미지URL': image_url
     }
     stock = Stock.objects.get(symbol=symbol)
     user_stock = UserStock.objects.filter(stock=stock)
@@ -233,8 +244,6 @@ def now_data(request):
     ],
 )
 @api_view(['GET'])
-@authentication_classes([SessionAuthentication,BasicAuthentication])
-@permission_classes([permissions.AllowAny])
 def day_data(request):
     symbol = request.GET.get('symbol')
     begin = request.GET.get('begin') 
@@ -288,8 +297,6 @@ def day_data(request):
     ],
 )
 @api_view(['GET'])
-@authentication_classes([SessionAuthentication,BasicAuthentication])
-@permission_classes([permissions.AllowAny])
 def a_day_data(request):
     symbol = request.GET.get('symbol')
     start = request.GET.get('start')
@@ -343,8 +350,6 @@ def a_day_data(request):
     ],
 )
 @api_view(['GET'])
-@authentication_classes([SessionAuthentication,BasicAuthentication])
-@permission_classes([permissions.AllowAny])
 def f_a_day_data(request):
     symbol = request.GET.get('symbol')
     start = request.GET.get('start')
@@ -401,8 +406,6 @@ def f_a_day_data(request):
     ],
 )
 @api_view(['GET'])
-@authentication_classes([SessionAuthentication,BasicAuthentication])
-@permission_classes([permissions.AllowAny])
 def f_day_data(request):
     symbol = request.GET.get('symbol')
     end = request.GET.get('end') 
@@ -456,8 +459,6 @@ def f_day_data(request):
     ],
 )
 @api_view(['GET'])
-@authentication_classes([SessionAuthentication,BasicAuthentication])
-@permission_classes([permissions.AllowAny])
 def week_data(request):
     symbol = request.GET.get('symbol')
     begin = request.GET.get('begin') 
@@ -511,8 +512,6 @@ def week_data(request):
     ],
 )
 @api_view(['GET'])
-@authentication_classes([SessionAuthentication,BasicAuthentication])
-@permission_classes([permissions.AllowAny])
 def a_week_data(request):
     symbol = request.GET.get('symbol')
     start = request.GET.get('start')
@@ -566,8 +565,6 @@ def a_week_data(request):
     ],
 )
 @api_view(['GET'])
-@authentication_classes([SessionAuthentication,BasicAuthentication])
-@permission_classes([permissions.AllowAny])
 def f_a_week_data(request):
     symbol = request.GET.get('symbol')
     start = request.GET.get('start')
@@ -639,8 +636,6 @@ def get_exchange_rate(request):
     ],
 )
 @api_view(['GET'])
-@authentication_classes([SessionAuthentication,BasicAuthentication])
-@permission_classes([permissions.AllowAny])
 def f_week_data(request):
     symbol = request.GET.get('symbol')
     end = request.GET.get('end') 
@@ -694,8 +689,6 @@ def f_week_data(request):
     ],
 )
 @api_view(['GET'])
-@authentication_classes([SessionAuthentication,BasicAuthentication])
-@permission_classes([permissions.AllowAny])
 def hmm__minute_data(request):
     symbol = request.GET.get('symbol')
     end = request.GET.get('end')
@@ -738,8 +731,6 @@ def hmm__minute_data(request):
     ],
 )
 @api_view(['GET'])
-@authentication_classes([SessionAuthentication,BasicAuthentication])
-@permission_classes([permissions.AllowAny])
 def minute_data(request):
     count = request.GET.get('count')
     symbol = request.GET.get('symbol')
@@ -783,8 +774,6 @@ def minute_data(request):
     ],
 )
 @api_view(['GET'])
-@authentication_classes([SessionAuthentication,BasicAuthentication])
-@permission_classes([permissions.AllowAny])
 def a_minute_data(request):
     print(request)
     symbol = request.GET.get('symbol')
@@ -824,8 +813,6 @@ def a_minute_data(request):
     ],
 )
 @api_view(['GET'])
-@authentication_classes([SessionAuthentication,BasicAuthentication])
-@permission_classes([permissions.AllowAny])
 def f_a_minute_data(request):
     symbol = request.GET.get('symbol')
     payload=""
@@ -878,8 +865,6 @@ def f_a_minute_data(request):
     ],
 )
 @api_view(['GET'])
-@authentication_classes([SessionAuthentication,BasicAuthentication])
-@permission_classes([permissions.AllowAny])
 def f_minute_data(request):
     symbol = request.GET.get('symbol')
     headers = {
@@ -926,8 +911,6 @@ def f_minute_data(request):
     ],
 )
 @api_view(['GET'])
-@authentication_classes([SessionAuthentication,BasicAuthentication])
-@permission_classes([permissions.AllowAny])
 def f_now_data(request):
     symbol = request.GET.get('symbol')
     headers = {
@@ -942,8 +925,11 @@ def f_now_data(request):
     response = requests.request("GET", f_url, headers=headers, data=f_payload)
     response_data = response.json() 
     daily_price = response_data['output'] 
-    print(daily_price['last'])
-    print(daily_price['t_rate'])
+    image_path = os.path.join(settings.MEDIA_ROOT, f'{symbol}.jpg')
+    if os.path.exists(image_path) or os.path.isfile(image_path):
+        image_url = f'https://stalksound.store/image/{symbol}.jpg'
+    else:
+        image_url = 'https://stalksound.store/image/default.jpg'
     chart_data = {
         '거래량' : daily_price['tvol'],
         '전일종가': daily_price['base'],
@@ -956,7 +942,7 @@ def f_now_data(request):
         '등락율': daily_price['t_xrat'],
         '환율':daily_price['t_rate'],
         '전일 환율':daily_price['p_rate'],
-        
+        '이미지URL': image_url,     
     }
     stock = Stock.objects.get(symbol=symbol)
     user_stock = UserStock.objects.filter(stock=stock)
@@ -983,8 +969,6 @@ def f_now_data(request):
     tags=['내정보'],
 )
 @api_view(['GET'])
-@authentication_classes([SessionAuthentication,BasicAuthentication])
-@permission_classes([permissions.AllowAny])
 # @permission_classes([permissions.IsAuthenticated])
 def user_info(request):
     try:
@@ -1030,8 +1014,6 @@ def user_info(request):
     )
 )
 @api_view(['POST'])
-@authentication_classes([SessionAuthentication,BasicAuthentication])
-@permission_classes([permissions.AllowAny])
 # @permission_classes([permissions.IsAuthenticated])
 def sell(request):
     stock_symbol = request.data.get('stock_symbol')
@@ -1127,8 +1109,6 @@ def sell(request):
     )
 )
 @api_view(['POST'])
-@authentication_classes([SessionAuthentication,BasicAuthentication])
-@permission_classes([permissions.AllowAny])
 # @permission_classes([permissions.IsAuthenticated])
 def buy(request):
     stock_symbol = request.data.get('stock_symbol')
@@ -1233,9 +1213,6 @@ def buy(request):
     )
 )
 @api_view(['POST'])
-@authentication_classes([SessionAuthentication,BasicAuthentication])
-@authentication_classes([SessionAuthentication,BasicAuthentication])
-@permission_classes([permissions.AllowAny])
 # @permission_classes([permissions.IsAuthenticated])
 def like_stock(request):
     stock_symbol = request.data.get('symbol')
@@ -1277,8 +1254,6 @@ def like_stock(request):
     ),
 )
 @api_view(['POST'])
-@authentication_classes([SessionAuthentication, BasicAuthentication])
-@permission_classes([permissions.AllowAny])
 def data_to_sound(request):
     data = request.data.get('lista')
     duration = 0.5
