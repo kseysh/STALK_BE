@@ -45,7 +45,7 @@ def substitution(mx,mn,chart):
     lista = []
     for i in chart:        
         percentage = ((i - mn)/((mx-mn))) *200
-        lista.append(percentage*10+100)
+        lista.append(percentage*10-200)
     return lista
 
 #사인파 만드는 함수
@@ -1256,12 +1256,25 @@ def like_stock(request):
 @api_view(['POST'])
 def data_to_sound(request):
     data = request.data.get('lista')
-    duration = 0.5
+    duration = 0.4
     result = generate_sine_wave(0.1, 0)  # 사인파들을 numpy.ndarray 형태로 받아올 빈 numpy.ndarray
-    for i in data:
+    # for i in data:
+    #     sine = generate_sine_wave(duration, i)
+    #     result = np.concatenate((result, sine))
+    # log_data = np.log(np.array(data) - min(data) + 1)
+    # max_log_value = max(log_data)
+    # min_log_value = min(log_data)
+    # adjusted_data = [(x - min_log_value) / (max_log_value - min_log_value) * 1000 for x in log_data]
+    min_value = min(data)
+    max_value = max(data)
+    adjusted_data = [(value - min_value-70) / (max_value - min_value) * 2000 for value in data]
+
+    
+    for i in adjusted_data:
+        # 스케일을 조정하여 큰 값으로 변환
         sine = generate_sine_wave(duration, i)
         result = np.concatenate((result, sine))
-
+    
     wav_stream = BytesIO()
     wavfile.write(wav_stream, 44100, result)
     wav_bytes = wav_stream.getvalue()
