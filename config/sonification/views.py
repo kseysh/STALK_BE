@@ -1298,7 +1298,6 @@ def data_to_sound(request):
 
 
 class CheckIsLike(APIView): 
-    permission_classes = [permissions.IsAuthenticated]
     stock_name= openapi.Parameter('stock_name', openapi.IN_QUERY, description='종목 이름', required=True, type=openapi.TYPE_STRING)
     @swagger_auto_schema(tags=['좋아요가 눌려져 있는 주식인지 확인하는 기능'],manual_parameters=[stock_name], responses={200: 'Success'})
     def get(self, request):
@@ -1327,8 +1326,6 @@ class CheckIsLike(APIView):
     ),
 )
 @api_view(['POST'])
-@authentication_classes([SessionAuthentication, BasicAuthentication])
-@permission_classes([permissions.AllowAny])
 def speech_to_text(request):
     # data = open("your/path/to/voice.mp3", "rb") # STT를 진행하고자 하는 음성 파일
 
@@ -1361,8 +1358,6 @@ def speech_to_text(request):
     tags=['데이터베이스 설정']
 )
 @api_view(['GET'])
-@authentication_classes([SessionAuthentication,BasicAuthentication])
-@permission_classes([permissions.AllowAny])
 def create_stock_database(request):
     ## 국내 주식 시총기준 100위 데이터베이스 생성 ##
     headers = {
@@ -1438,3 +1433,19 @@ def create_stock_database(request):
 
     return Response({'국내 시가총액 순위': transaction_data_list,
                     '해외 시가총액 순위': f_transaction_data_list,})
+
+
+class StockAPIView(APIView):
+    is_domestic_stock = openapi.Parameter('is_domestic_stock', openapi.IN_QUERY, description='is_domestic_stock True/False면 국내/해외 주식 리스트', required=True, type=openapi.TYPE_STRING)
+    @swagger_auto_schema(tags=['Stock의 전체 리스트를 불러오는 기능'],manual_parameters=[is_domestic_stock], responses={200: 'Success'})
+    def get(self, request):
+        req = request.GET.get('is_domestic_stock')
+        result = []
+        stocks = Stock.objects.filter(is_domestic_stock=req)
+        for item in stocks:
+            data = {
+                'prdt_name':item.name,
+                'code':item.symbol,
+            }
+            result.append(data)
+        return Response(result)
