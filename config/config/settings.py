@@ -58,19 +58,6 @@ INSTALLED_APPS = [
     'dj_rest_auth.registration',
 ]
 
-REST_FRAMEWORK = {
-    'DEFAULT_PERMISSION_CLASSES': (
-        # 'rest_framework.permissions.IsAuthenticated', # 인증된 사용자만 접근
-        'rest_framework.permissions.AllowAny',
-    ),
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework.authentication.BasicAuthentication',
-        'rest_framework.authentication.SessionAuthentication',
-        'dj_rest_auth.jwt_auth.JWTCookieAuthentication',
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-    ),
-}
-
 REST_AUTH = {
     'USE_JWT': True,
 }
@@ -96,7 +83,6 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-        'rest_framework.authentication.SessionAuthentication',
         'rest_framework.authentication.TokenAuthentication',
     ],
 }
@@ -195,19 +181,13 @@ SIMPLE_JWT = {
     'AUDIENCE': None,
     'ISSUER': None,
     'JWK_URL': None,
-    'LEEWAY': 0,
+    "TOKEN_OBTAIN_SERIALIZER": "config.serializers.MyTokenObtainPairSerializer",
 
     'AUTH_HEADER_TYPES': ('Bearer',),
-    'AUTH_HEADER_NAME': 'HTTP_AUTHORIZATION',
     'USER_ID_FIELD': 'username',
     'USER_ID_CLAIM': 'username',
-    'USER_AUTHENTICATION_RULE': 'rest_framework_simplejwt.authentication.default_user_authentication_rule',
 
-    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
-    'TOKEN_TYPE_CLAIM': 'token_type',
-    'TOKEN_USER_CLASS': 'rest_framework_simplejwt.models.TokenUser',
-
-    'JTI_CLAIM': 'jti',
+    'TOKEN_USER_CLASS': 'accounts.User',
 
     'SLIDING_TOKEN_REFRESH_EXP_CLAIM': 'refresh_exp',
     'SLIDING_TOKEN_LIFETIME': timedelta(minutes=5),

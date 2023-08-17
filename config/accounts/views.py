@@ -3,12 +3,14 @@ import requests, jwt
 from django.shortcuts import redirect
 from django.conf import settings
 from django.shortcuts import get_object_or_404
+from django.http import JsonResponse
 
 from rest_framework import status,permissions 
 from rest_framework.response import Response
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenRefreshSerializer
 from rest_framework.authentication import SessionAuthentication, BasicAuthentication
 from rest_framework.decorators import api_view,permission_classes,authentication_classes
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from .models import User
 from .serializers import UserSerializer
@@ -97,6 +99,7 @@ def kakao_callback(request):
         token = TokenObtainPairSerializer.get_token(user)
         refresh_token = str(token)
         access_token = str(token.access_token)
+        access_token = "Bearer " + access_token
         res = Response(
             {
                 "user": user_serializer.data,
@@ -186,5 +189,10 @@ def temp_user_login(request):
     res.set_cookie("accessToken", value=access_token, max_age=None, expires=None, secure=True, samesite="None", httponly=True)
     res.set_cookie("refreshToken", value=refresh_token, max_age=None, expires=None, secure=True, samesite="None",httponly=True)
     return res
+
+@api_view(['GET'])
+def test403(request):
+    
+    return JsonResponse({'data': request.user.username})
 
 
