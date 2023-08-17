@@ -70,8 +70,6 @@ f_payload = ""
     tags=['(해외)주식 데이터']
 )
 @api_view(['GET'])
-@authentication_classes([SessionAuthentication,BasicAuthentication])
-@permission_classes([permissions.AllowAny])
 def f_transaction_rank(request):
     headers = {
         'content-type': 'application/json',
@@ -136,8 +134,6 @@ def f_transaction_rank(request):
     tags=['주식 데이터']
 )
 @api_view(['GET'])
-@authentication_classes([SessionAuthentication,BasicAuthentication])
-@permission_classes([permissions.AllowAny])
 def transaction_rank(request):
     headers = {
         'content-type': 'application/json; charset=utf-8',
@@ -516,8 +512,6 @@ def week_data(request):
     ],
 )
 @api_view(['GET'])
-@authentication_classes([SessionAuthentication,BasicAuthentication])
-@permission_classes([permissions.AllowAny])
 def a_week_data(request):
     symbol = request.GET.get('symbol')
     start = request.GET.get('start')
@@ -571,8 +565,6 @@ def a_week_data(request):
     ],
 )
 @api_view(['GET'])
-@authentication_classes([SessionAuthentication,BasicAuthentication])
-@permission_classes([permissions.AllowAny])
 def f_a_week_data(request):
     symbol = request.GET.get('symbol')
     start = request.GET.get('start')
@@ -644,8 +636,6 @@ def get_exchange_rate(request):
     ],
 )
 @api_view(['GET'])
-@authentication_classes([SessionAuthentication,BasicAuthentication])
-@permission_classes([permissions.AllowAny])
 def f_week_data(request):
     symbol = request.GET.get('symbol')
     end = request.GET.get('end') 
@@ -699,8 +689,6 @@ def f_week_data(request):
     ],
 )
 @api_view(['GET'])
-@authentication_classes([SessionAuthentication,BasicAuthentication])
-@permission_classes([permissions.AllowAny])
 def hmm__minute_data(request):
     symbol = request.GET.get('symbol')
     end = request.GET.get('end')
@@ -743,8 +731,6 @@ def hmm__minute_data(request):
     ],
 )
 @api_view(['GET'])
-@authentication_classes([SessionAuthentication,BasicAuthentication])
-@permission_classes([permissions.AllowAny])
 def minute_data(request):
     count = request.GET.get('count')
     symbol = request.GET.get('symbol')
@@ -788,8 +774,6 @@ def minute_data(request):
     ],
 )
 @api_view(['GET'])
-@authentication_classes([SessionAuthentication,BasicAuthentication])
-@permission_classes([permissions.AllowAny])
 def a_minute_data(request):
     print(request)
     symbol = request.GET.get('symbol')
