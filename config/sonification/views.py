@@ -14,6 +14,7 @@ from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg.openapi import Schema, TYPE_ARRAY, TYPE_NUMBER
+from django.contrib.staticfiles.templatetags.staticfiles import static
 
 from io import BytesIO
 from scipy.io import wavfile
@@ -95,6 +96,7 @@ def f_transaction_rank(request):
             '전일 대비율': float(item['rate']),
             '대비': float(item['diff']),
             '환율':exchange_rate,
+            '이미지URL': f'/static/images/{item["code"]}.jpg'
         }
         try:
             stock = Stock.objects.get(
@@ -142,6 +144,7 @@ def transaction_rank(request):
             '현재가':float(item['price']),
             '전일 대비율': float(item['chgrate']),
             '대비': float(item['change']),
+            '이미지URL': f'/static/images/{item["code"]}.jpg'
         }
         try:
             stock = Stock.objects.get(
@@ -961,12 +964,11 @@ def f_now_data(request):
     tags=['내정보'],
 )
 @api_view(['GET'])
-@authentication_classes([SessionAuthentication,BasicAuthentication])
-@permission_classes([permissions.AllowAny])
+@permission_classes([permissions.IsAuthenticated])
 def user_info(request):
     try:
         # user = request.user
-        user = User.objects.get(id=1)
+        user = User.objects.get(id=2)
         user_liked_stocks = Stock.objects.filter(liked_user=user)
         liked_stock_data = [{'prdt_name': stock.name, 'code': stock.symbol, 'is_domestic_stock': stock.is_domestic_stock} for stock in user_liked_stocks]
         try:
@@ -1007,8 +1009,7 @@ def user_info(request):
     )
 )
 @api_view(['POST'])
-@authentication_classes([SessionAuthentication,BasicAuthentication])
-@permission_classes([permissions.AllowAny])
+@permission_classes([permissions.IsAuthenticated])
 def sell(request):
     stock_symbol = request.data.get('stock_symbol')
     quantity = request.data.get('quantity')
@@ -1035,7 +1036,7 @@ def sell(request):
         to_price = int(float((resp['output']['last']))*float(exchange_rate))*quantity
     per_one_price = to_price/quantity
     # user = request.user
-    user = User.objects.get(id=1)
+    user = User.objects.get(id=2)
     if(quantity<=0):
         return Response({"error": "양수값을 넣어라"})
     try:
@@ -1103,8 +1104,7 @@ def sell(request):
     )
 )
 @api_view(['POST'])
-@authentication_classes([SessionAuthentication,BasicAuthentication])
-@permission_classes([permissions.AllowAny])
+@permission_classes([permissions.IsAuthenticated])
 def buy(request):
     stock_symbol = request.data.get('stock_symbol')
     quantity = request.data.get('quantity')
@@ -1131,7 +1131,7 @@ def buy(request):
         to_price = int(float(resp['output']['last'])*float(exchange_rate))*quantity
     per_one_price = to_price/quantity
     # user = request.user
-    user = User.objects.get(id=1)
+    user = User.objects.get(id=2)
     if(quantity<=0):
         return Response({"error": "양수값을 넣어라"})
     try:
@@ -1208,8 +1208,7 @@ def buy(request):
     )
 )
 @api_view(['POST'])
-@authentication_classes([SessionAuthentication,BasicAuthentication])
-@permission_classes([permissions.AllowAny])
+@permission_classes([permissions.IsAuthenticated])
 def like_stock(request):
     stock_symbol = request.data.get('symbol')
     try:
@@ -1218,7 +1217,7 @@ def like_stock(request):
         return Response(status=404)
 
     # user = request.user
-    user = User.objects.get(id=1)
+    user = User.objects.get(id=2)
     if user in stock.liked_user.all():
         stock.liked_user.remove(user)
         return Response({'message': '찜 취소 완료'})
@@ -1271,8 +1270,7 @@ def data_to_sound(request):
 
 
 class CheckIsLike(APIView): 
-    authentication_classes = [SessionAuthentication,BasicAuthentication]
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
     stock_name= openapi.Parameter('stock_name', openapi.IN_QUERY, description='종목 이름', required=True, type=openapi.TYPE_STRING)
     @swagger_auto_schema(tags=['좋아요가 눌려져 있는 주식인지 확인하는 기능'],manual_parameters=[stock_name], responses={200: 'Success'})
     def get(self, request):
