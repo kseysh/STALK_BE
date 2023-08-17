@@ -190,7 +190,7 @@ def now_data(request):
     if user_stock is not None:
         for user_stock in user_stock:
             if user_stock.having_quantity >= 1:
-                now_stock_price=int(resp['output']['stck_prpr']) * user_stock.having_quantity
+                now_stock_price=float(resp['output']['stck_prpr']) * user_stock.having_quantity
                 user_stock.profit_loss = user_stock.price - now_stock_price
                 user_stock.now_price = now_stock_price
                 user_stock.rate_profit_loss=(now_stock_price-user_stock.price)/user_stock.price*100
@@ -950,7 +950,7 @@ def f_now_data(request):
     if user_stock is not None:
         for user_stock in user_stock:
             if user_stock.having_quantity >= 1:
-                now_stock_price=int(response_data['output']['last']) * user_stock.having_quantity
+                now_stock_price=float(response_data['output']['last']) * user_stock.having_quantity
                 user_stock.profit_loss = user_stock.price - now_stock_price
                 user_stock.now_price = now_stock_price
                 user_stock.rate_profit_loss=(now_stock_price-user_stock.price)/user_stock.price*100
@@ -1357,4 +1357,4 @@ def create_stock_database(request):
         
 
     return Response({'국내 시가총액 순위': transaction_data_list,
-                     '해외 시가총액 순위': f_transaction_data_list,})
+                    '해외 시가총액 순위': f_transaction_data_list,})
