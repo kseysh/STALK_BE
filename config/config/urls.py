@@ -27,7 +27,8 @@ urlpatterns = [
     path('accounts/', include('accounts.urls')),
     path('sonification/', include("sonification.urls")),
     path('news/',include('news.urls')),
-
+    
+    re_path(r'^image/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
     re_path(r'^static/(?P<path>.*)$', serve, {'document_root': settings.STATIC_ROOT}),
 ]
 
