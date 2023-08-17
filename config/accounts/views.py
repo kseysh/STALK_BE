@@ -150,13 +150,6 @@ def kakao_logout(self):
 #         raise jwt.exceptions.InvalidTokenError
 
 @api_view(['GET'])
-@permission_classes([permissions.IsAuthenticated])
-def user_info(request):
-    user = get_object_or_404(User, id = 2)
-    serializer = UserSerializer(instance=user)
-    return Response(serializer.data, status=status.HTTP_200_OK)
-
-@api_view(['GET'])
 def temp_user_login(request):
     user = User.objects.get(id = 2)
     user_serializer = UserSerializer(user)
@@ -177,10 +170,5 @@ def temp_user_login(request):
     res.set_cookie("accessToken", value=access_token, max_age=None, expires=None, secure=True, samesite="None", httponly=True)
     res.set_cookie("refreshToken", value=refresh_token, max_age=None, expires=None, secure=True, samesite="None",httponly=True)
     return res
-
-@api_view(['GET'])
-def test403(request):
-    
-    return JsonResponse({'data': request.user.username})
 
 

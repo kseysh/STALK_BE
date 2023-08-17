@@ -1,4 +1,5 @@
 from django.db import IntegrityError
+from django.core.exceptions import ObjectDoesNotExist
 import requests
 import mojito
 import numpy as np
@@ -105,9 +106,19 @@ def f_transaction_rank(request):
             like=stock.likes
             data['좋아요 개수'] = like
             transaction_data_list.append(data)
-        except IntegrityError:
-            data['좋아요 개수'] = 0
-            pass
+        except ObjectDoesNotExist:
+            try:
+                stock = Stock.objects.create(
+                symbol=item['symb'],
+                name=item['name'],
+                is_domestic_stock = False,
+                stock_image=f'{item["symb"]}.jpg'
+                )
+                data['좋아요 개수'] = 0
+                transaction_data_list.append(data)
+            except:
+                pass
+        
 
     return Response({'시가총액 순위': transaction_data_list})
 
@@ -153,9 +164,18 @@ def transaction_rank(request):
             like=stock.likes
             data['좋아요 개수'] = like
             transaction_data_list.append(data)
-        except IntegrityError:
-            data['좋아요 개수'] = 0
-            pass
+        except ObjectDoesNotExist:
+            try:
+                stock = Stock.objects.create(
+                symbol=item['code'],
+                name=item['name'],
+                is_domestic_stock = False,
+                stock_image=f'{item["code"]}.jpg'
+                )
+                data['좋아요 개수'] = 0
+                transaction_data_list.append(data)
+            except:
+                pass
 
     return Response({'시가총액 순위': transaction_data_list})
 
@@ -1410,12 +1430,9 @@ def create_stock_database(request):
             is_domestic_stock = False,
             stock_image=f'{item["symb"]}.jpg'
             )
-            like=0
-            data['좋아요 개수'] = like
-            f_transaction_data_list.append(data)
-
-        except IntegrityError:
             data['좋아요 개수'] = 0
+            f_transaction_data_list.append(data)
+        except IntegrityError:
             pass
         
 
