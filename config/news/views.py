@@ -25,7 +25,6 @@ from rest_framework.decorators import api_view
 def get_specific_news(request): # 뉴스 아이디를 통해 특정 뉴스의 글을 반환
     article_id = request.GET.get('article_id')
     office_id = request.GET.get('office_id')
-    # chrome_service = Service('/usr/bin/chromedriver')
     
     chrome_options = webdriver.ChromeOptions()
     chrome_options.add_argument("--headless")

@@ -86,7 +86,7 @@ def f_transaction_rank(request):
     
     for item in response_data['output2']:
         image_path = os.path.join(settings.MEDIA_ROOT, f'{item["symb"]}.jpg')
-        if os.path.exists(image_path) or os.path.isfile(image_path):
+        if os.path.isfile(image_path):
             image_url = f'https://stalksound.store/image/{item["symb"]}.jpg'
         else:
             image_url = 'https://stalksound.store/image/default.jpg'
@@ -149,7 +149,7 @@ def transaction_rank(request):
     transaction_data_list = []
     for item in response_data['output2']:
         image_path = os.path.join(settings.MEDIA_ROOT, f'{item["code"]}.jpg')
-        if os.path.exists(image_path) or os.path.isfile(image_path):
+        if os.path.isfile(image_path):
             image_url = f'https://stalksound.store/image/{item["code"]}.jpg'
         else:
             image_url = 'https://stalksound.store/image/default.jpg'
@@ -160,7 +160,7 @@ def transaction_rank(request):
             '현재가':float(item['price']),
             '전일 대비율': float(item['chgrate']),
             '대비': float(item['change']),
-            '이미지URL': f'https://stalksound.store/image/{item["code"]}.jpg'
+            '이미지URL': image_url,
         }
         try:
             stock = Stock.objects.get(
