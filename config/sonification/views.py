@@ -96,7 +96,7 @@ def f_transaction_rank(request):
             '전일 대비율': float(item['rate']),
             '대비': float(item['diff']),
             '환율':exchange_rate,
-            '이미지URL': f'/static/images/{item["code"]}.jpg'
+            '이미지URL': f'/static/images/{item["symb"]}.jpg'
         }
         try:
             stock = Stock.objects.get(
