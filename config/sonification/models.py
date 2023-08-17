@@ -1,9 +1,7 @@
 from django.db import models
 from django.apps import apps
 from accounts.models import User
-# User = apps.get_model('accounts', 'User')
 
-## 한유저가 좋아요 해논 stocks를 뽑아야하는데
 class Stock(models.Model):
     symbol = models.CharField(max_length=10, unique=True)
     name = models.CharField(max_length=100) 
