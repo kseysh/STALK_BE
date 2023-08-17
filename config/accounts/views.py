@@ -24,8 +24,6 @@ from .serializers import UserSerializer
 KAKAO_CALLBACK_URI = 'https://stalk-login-test.pages.dev/kakao/callback'
 
 @api_view(['GET'])
-@authentication_classes([SessionAuthentication,BasicAuthentication])
-@permission_classes([permissions.AllowAny])
 def kakao_login(request): # 백엔드 테스트용 login 코드 이 코드는 프론트에서 처리하도록 하기
     rest_api_key = settings.KAKAO_REST_API_KEY
     return redirect(
@@ -33,8 +31,6 @@ def kakao_login(request): # 백엔드 테스트용 login 코드 이 코드는 �
     )
 
 @api_view(['GET'])
-@authentication_classes([SessionAuthentication,BasicAuthentication])
-@permission_classes([permissions.AllowAny])
 def kakao_callback(request):
     rest_api_key = settings.KAKAO_REST_API_KEY
     code = request.GET.get("code")
@@ -117,9 +113,6 @@ def kakao_callback(request):
         return res
     
 @api_view(['GET'])
-@authentication_classes([SessionAuthentication,BasicAuthentication])
-# @permission_classes([permissions.IsAuthenticated])
-@permission_classes([permissions.AllowAny])
 def kakao_logout(self):
     response = Response({
         "message": "Logout success"
@@ -158,17 +151,8 @@ def kakao_logout(self):
 #             return res
 #         raise jwt.exceptions.InvalidTokenError
 
-@api_view(['GET'])
-@authentication_classes([SessionAuthentication,BasicAuthentication])
-@permission_classes([permissions.AllowAny])
-def user_info(request):
-    user = get_object_or_404(User, id = 2)
-    serializer = UserSerializer(instance=user)
-    return Response(serializer.data, status=status.HTTP_200_OK)
 
 @api_view(['GET'])
-@authentication_classes([SessionAuthentication,BasicAuthentication])
-@permission_classes([permissions.AllowAny])
 def temp_user_login(request):
     user = User.objects.get(id = 2)
     user_serializer = UserSerializer(user)
@@ -189,10 +173,5 @@ def temp_user_login(request):
     res.set_cookie("accessToken", value=access_token, max_age=None, expires=None, secure=True, samesite="None", httponly=True)
     res.set_cookie("refreshToken", value=refresh_token, max_age=None, expires=None, secure=True, samesite="None",httponly=True)
     return res
-
-@api_view(['GET'])
-def test403(request):
-    
-    return JsonResponse({'data': request.user.username})
 
 

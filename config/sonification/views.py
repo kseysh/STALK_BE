@@ -15,7 +15,6 @@ from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg.openapi import Schema, TYPE_ARRAY, TYPE_NUMBER
-from django.contrib.staticfiles.templatetags.staticfiles import static
 
 from io import BytesIO
 from scipy.io import wavfile

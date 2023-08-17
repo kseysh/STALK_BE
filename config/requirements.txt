@@ -27,6 +27,7 @@ oauthlib==3.2.2
 outcome==1.2.0
 packaging==23.1
 pandas==2.0.3
+Pillow==10.0.0
 pycparser==2.21
 pycryptodome==3.18.0
 pydub==0.25.1
