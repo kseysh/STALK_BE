@@ -122,9 +122,7 @@ def kakao_logout(self):
     return response
 
 # @api_view(['GET'])
-# @authentication_classes([SessionAuthentication,BasicAuthentication])
-# # @permission_classes([permissions.IsAuthenticated])
-# @permission_classes([permissions.AllowAny])
+# @permission_classes([permissions.IsAuthenticated])
 # def user_info(request):
 #     try:
 #         access = request.COOKIES['accessToken']
@@ -150,7 +148,6 @@ def kakao_logout(self):
 
 #             return res
 #         raise jwt.exceptions.InvalidTokenError
-
 
 @api_view(['GET'])
 def temp_user_login(request):

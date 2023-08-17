@@ -983,7 +983,9 @@ def f_now_data(request):
     tags=['내정보'],
 )
 @api_view(['GET'])
-@permission_classes([permissions.IsAuthenticated])
+@authentication_classes([SessionAuthentication,BasicAuthentication])
+@permission_classes([permissions.AllowAny])
+# @permission_classes([permissions.IsAuthenticated])
 def user_info(request):
     try:
         # user = request.user
@@ -1028,7 +1030,9 @@ def user_info(request):
     )
 )
 @api_view(['POST'])
-@permission_classes([permissions.IsAuthenticated])
+@authentication_classes([SessionAuthentication,BasicAuthentication])
+@permission_classes([permissions.AllowAny])
+# @permission_classes([permissions.IsAuthenticated])
 def sell(request):
     stock_symbol = request.data.get('stock_symbol')
     quantity = request.data.get('quantity')
@@ -1123,7 +1127,9 @@ def sell(request):
     )
 )
 @api_view(['POST'])
-@permission_classes([permissions.IsAuthenticated])
+@authentication_classes([SessionAuthentication,BasicAuthentication])
+@permission_classes([permissions.AllowAny])
+# @permission_classes([permissions.IsAuthenticated])
 def buy(request):
     stock_symbol = request.data.get('stock_symbol')
     quantity = request.data.get('quantity')
@@ -1227,7 +1233,10 @@ def buy(request):
     )
 )
 @api_view(['POST'])
-@permission_classes([permissions.IsAuthenticated])
+@authentication_classes([SessionAuthentication,BasicAuthentication])
+@authentication_classes([SessionAuthentication,BasicAuthentication])
+@permission_classes([permissions.AllowAny])
+# @permission_classes([permissions.IsAuthenticated])
 def like_stock(request):
     stock_symbol = request.data.get('symbol')
     try:
