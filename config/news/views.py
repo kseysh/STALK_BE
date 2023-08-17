@@ -7,12 +7,9 @@ from selenium import webdriver
 from selenium.webdriver.chrome.service import Service as ChromeService
 
 
-from webdriver_manager.chrome import ChromeDriverManager
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
-from rest_framework import permissions 
-from rest_framework.authentication import SessionAuthentication, BasicAuthentication
-from rest_framework.decorators import api_view,permission_classes,authentication_classes
+from rest_framework.decorators import api_view
 
 @swagger_auto_schema(
     method='get',
@@ -25,8 +22,6 @@ from rest_framework.decorators import api_view,permission_classes,authentication
     ],
 )
 @api_view(['GET'])
-@authentication_classes([SessionAuthentication,BasicAuthentication])
-@permission_classes([permissions.AllowAny])
 def get_specific_news(request): # 뉴스 아이디를 통해 특정 뉴스의 글을 반환
     article_id = request.GET.get('article_id')
     office_id = request.GET.get('office_id')
@@ -72,8 +67,6 @@ def get_specific_news(request): # 뉴스 아이디를 통해 특정 뉴스의 �
     ],
 )
 @api_view(['GET'])
-@authentication_classes([SessionAuthentication,BasicAuthentication])
-@permission_classes([permissions.AllowAny])
 def get_news_by_stock_code(request): # 특정 종목의 뉴스리스트를 반환
     stock_code = request.GET.get('stock_code')
     search_url = 'https://openapi.naver.com/v1/search/news.json?query='+ stock_code +'&display=100&start=1&sort=date'
@@ -122,11 +115,9 @@ def get_news_by_stock_code(request): # 특정 종목의 뉴스리스트를 반�
     tags=['뉴스 조회'],
 )
 @api_view(['GET'])
-@authentication_classes([SessionAuthentication,BasicAuthentication])
-@permission_classes([permissions.AllowAny])
 def get_realtime_news(self): # 많이 본 뉴스리스트 10개를 반환
     # news_url = 'https://finance.naver.com/news/news_list.naver' # 모든 뉴스 리스
-    news_url = 'https://finance.naver.com/news/news_list.naver?mode=RANK'
+    news_url = 'https://finance.naver.com/news/news_list.naver?mode=RANK&date=20230818'
     headers = {'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36"}
     res = requests.get(news_url,headers=headers)
     soup = BeautifulSoup(res.text,'html.parser')

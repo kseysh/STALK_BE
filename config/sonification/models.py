@@ -10,7 +10,7 @@ class Stock(models.Model):
     likes = models.IntegerField(default=0)
     liked_user = models.ManyToManyField(User, related_name="liked_stock", blank=True)
     is_domestic_stock = models.BooleanField(default=True)
-    stock_image = models.ImageField(null=True)
+    stock_image = models.ImageField(upload_to='image',null=True)
     def __str__(self):
         return self.name
 
