@@ -10,6 +10,7 @@ class Stock(models.Model):
     likes = models.IntegerField(default=0)
     liked_user = models.ManyToManyField(User, related_name="liked_stock", blank=True)
     is_domestic_stock = models.BooleanField(default=True)
+    stock_image = models.ImageField(null=True)
     def __str__(self):
         return self.name
 
@@ -35,3 +36,13 @@ class Record(models.Model):
     
     def __str__(self):
         return f"{self.stock} - {self.user}"
+    
+class PurchaseHistory(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    stock = models.ForeignKey(Stock, on_delete=models.CASCADE)
+    quantity = models.PositiveIntegerField()
+    per_one_price = models.DecimalField(max_digits=10, decimal_places=2)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-timestamp']

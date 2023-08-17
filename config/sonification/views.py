@@ -21,7 +21,7 @@ from django.http import HttpResponse, JsonResponse
 from .serializers import StockSerializer, RecordSerializer, UserStockSerializer
 
 from accounts.models import User
-from .models import Stock, Record, UserStock
+from .models import PurchaseHistory, Stock, Record, UserStock
 
 ##한국투자증권 keys
 f = open("./koreainvestment.key")
@@ -90,8 +90,8 @@ def f_transaction_rank(request):
             '종목코드': item['symb'],
             '시가총액 순위': item['rank'],
             '시가총액' : float(item['valx']),
-            '현재가': float(item['last']),
-            '$현재가': int(float(item['last'])*float(exchange_rate)),
+            '$현재가': float(item['last']),
+            '현재가': int(float(item['last'])*float(exchange_rate)),
             '전일 대비율': float(item['rate']),
             '대비': float(item['diff']),
             '환율':exchange_rate,
@@ -173,7 +173,6 @@ def transaction_rank(request):
 def now_data(request):
     symbol = request.GET.get('symbol')
     resp = broker.fetch_price(symbol)
-    print(resp)
     chart_data = { 
         '전일대비부호': resp['output']['prdy_vrss_sign'],
         '전일 대비율': resp['output']['prdy_ctrt'],
@@ -190,7 +189,7 @@ def now_data(request):
     if user_stock is not None:
         for user_stock in user_stock:
             if user_stock.having_quantity >= 1:
-                now_stock_price=float(resp['output']['stck_prpr']) * user_stock.having_quantity
+                now_stock_price=int(resp['output']['stck_prpr']) * user_stock.having_quantity
                 user_stock.profit_loss = user_stock.price - now_stock_price
                 user_stock.now_price = now_stock_price
                 user_stock.rate_profit_loss=(now_stock_price-user_stock.price)/user_stock.price*100
@@ -592,7 +591,6 @@ def f_a_week_data(request):
 
 
 def get_exchange_rate(request):
-    print("a")
     payload=""
     headers = {
         'content-type': 'application/json; charset=utf-8',
@@ -677,7 +675,6 @@ def f_week_data(request):
 @authentication_classes([SessionAuthentication,BasicAuthentication])
 @permission_classes([permissions.AllowAny])
 def hmm__minute_data(request):
-    print(request)
     symbol = request.GET.get('symbol')
     end = request.GET.get('end')
     result = broker._fetch_today_1m_ohlcv(symbol,end)
@@ -923,12 +920,13 @@ def f_now_data(request):
     response = requests.request("GET", f_url, headers=headers, data=f_payload)
     response_data = response.json() 
     daily_price = response_data['output'] 
-
+    print(daily_price['last'])
+    print(daily_price['t_rate'])
     chart_data = {
         '거래량' : daily_price['tvol'],
         '전일종가': daily_price['base'],
         '$현재가': daily_price['last'],
-        '₩현재가': int(float(daily_price['last'])*float(daily_price['t_rate'])),
+        '현재가': int(float(daily_price['last'])*float(daily_price['t_rate'])),
         '고가': daily_price['high'],
         '저가': daily_price['low'],
         '시가': daily_price['open'],
@@ -968,7 +966,7 @@ def f_now_data(request):
 def user_info(request):
     try:
         # user = request.user
-        user = User.objects.get(id=2)
+        user = User.objects.get(id=1)
         user_liked_stocks = Stock.objects.filter(liked_user=user)
         liked_stock_data = [{'prdt_name': stock.name, 'code': stock.symbol, 'is_domestic_stock': stock.is_domestic_stock} for stock in user_liked_stocks]
         try:
@@ -1016,6 +1014,13 @@ def sell(request):
     quantity = request.data.get('quantity')
     exchange_rate = get_exchange_rate(request)
     if stock_symbol.isdigit(): #숫자일때, 국내
+        broker = mojito.KoreaInvestment(
+            api_key=key,
+            api_secret=secret,
+            acc_no=acc_no,
+            exchange="서울",
+            mock=True
+        )
         resp = broker.fetch_price(stock_symbol)
         to_price = int(resp['output']['stck_prpr'])*quantity
     else: #문자일때, 해외
@@ -1028,6 +1033,7 @@ def sell(request):
         )
         resp = broker.fetch_oversea_price(stock_symbol)
         to_price = int(float((resp['output']['last']))*float(exchange_rate))*quantity
+    per_one_price = to_price/quantity
     # user = request.user
     user = User.objects.get(id=1)
     if(quantity<=0):
@@ -1040,17 +1046,33 @@ def sell(request):
         user_stock = UserStock.objects.get(user=user, stock=stock)
     except UserStock.DoesNotExist:
         return Response({"error": "해당 종목을 보유하고 있지 않습니다"}, status=400)
+    purchase_history = PurchaseHistory.objects.create(
+        user=user,
+        stock=stock,
+        quantity=quantity,
+        per_one_price=per_one_price
+    )
+    purchase_histories = PurchaseHistory.objects.filter(user=user, stock=stock)
 
-    if to_price <= user_stock.price:
-        user.user_property += to_price
-        user_stock.price -= to_price
+    total_price = 0
+    total_quantity = 0
+    for history in purchase_histories:
+        total_price += history.per_one_price * history.quantity
+        total_quantity += history.quantity
+    if total_quantity > 0:
+        avg_price = total_price / total_quantity
+
+    if  user_stock.having_quantity>= quantity:
+        user_stock.having_quantity -= quantity
+        user.user_property += user_stock.now_price
+        user_stock.price = user_stock.having_quantity*avg_price
+        user_stock.now_price = user_stock.having_quantity*per_one_price
         user.save()
+        if user_stock.having_quantity <=0:
+            user_stock.delete()
+        user_stock.save()
     else:
         return Response({"error": "종목 보유량보다 큰 값을 입력 받았습니다"}, status=400)
-    user_stock.having_quantity -= quantity
-    user_stock.save()
-    if user_stock.having_quantity <=0:
-        user_stock.delete()
 
     record = Record.objects.create(
         user = user,
@@ -1087,7 +1109,14 @@ def buy(request):
     stock_symbol = request.data.get('stock_symbol')
     quantity = request.data.get('quantity')
     exchange_rate = get_exchange_rate(request)
-    if stock_symbol.isdigit(): #숫자일때, 국내
+    if stock_symbol.isdigit():#숫자일때, 국내
+        broker = mojito.KoreaInvestment(
+            api_key=key,
+            api_secret=secret,
+            acc_no=acc_no,
+            exchange="서울",
+            mock=True
+        )
         resp = broker.fetch_price(stock_symbol)
         to_price = int(float(resp['output']['stck_prpr']))*quantity
     else: #문자일때, 해외
@@ -1098,9 +1127,9 @@ def buy(request):
             exchange="나스닥",
             mock=True
         )
-        print("a")
         resp = broker.fetch_oversea_price(stock_symbol)
         to_price = int(float(resp['output']['last'])*float(exchange_rate))*quantity
+    per_one_price = to_price/quantity
     # user = request.user
     user = User.objects.get(id=1)
     if(quantity<=0):
@@ -1114,11 +1143,29 @@ def buy(request):
         user.user_property -= to_price
         user.save()
     else:
-        return Response({"error":"돈이 부족합니다"}, status=400)
+        return Response({"error":"잔액부족"}, status=400)
+    
+    purchase_history = PurchaseHistory.objects.create(
+        user=user,
+        stock=stock,
+        quantity=quantity,
+        per_one_price=per_one_price
+    )
+    purchase_histories = PurchaseHistory.objects.filter(user=user, stock=stock)
+
+    total_price = 0
+    total_quantity = 0
+    for history in purchase_histories:
+        total_price += history.per_one_price * history.quantity
+        total_quantity += history.quantity
+    if total_quantity > 0:
+        avg_price = total_price / total_quantity
+    
     try:
         user_stock = UserStock.objects.get(user=user, stock=stock)
-        user_stock.price += to_price
         user_stock.having_quantity += quantity
+        user_stock.price = avg_price * user_stock.having_quantity
+        user_stock.now_price = user_stock.having_quantity*per_one_price
         user_stock.save()
     except UserStock.DoesNotExist:
         user_stock = UserStock.objects.create(
@@ -1139,6 +1186,7 @@ def buy(request):
         price = to_price,
         left_money = user.user_property
     )
+
     
     stock_data = StockSerializer(stock).data
     user_stock_data = UserStockSerializer(user_stock).data
@@ -1170,7 +1218,7 @@ def like_stock(request):
         return Response(status=404)
 
     # user = request.user
-    user = User.objects.get(id=2)
+    user = User.objects.get(id=1)
     if user in stock.liked_user.all():
         stock.liked_user.remove(user)
         return Response({'message': '찜 취소 완료'})
@@ -1315,6 +1363,7 @@ def create_stock_database(request):
             symbol=item['code'],
             name=item['name'],
             is_domestic_stock = True,
+            stock_image=f'{item["code"]}.jpg'
             )
         try:
             like=stock.likes
@@ -1353,6 +1402,7 @@ def create_stock_database(request):
             symbol=item['symb'],
             name=item['name'],
             is_domestic_stock = False,
+            stock_image=f'{item["symb"]}.jpg'
             )
             like=0
             data['좋아요 개수'] = like

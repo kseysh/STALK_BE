@@ -11,7 +11,7 @@ class StockSerializer(serializers.ModelSerializer):
 class UserStockSerializer(serializers.ModelSerializer):
     stock = serializers.CharField(source='stock.name')
     stock_code = serializers.CharField(source='stock.symbol')
-    is_domestic_stock = serializers.CharField(source='stock.is_domestic_stock')
+    is_domestic_stock = serializers.BooleanField(source='stock.is_domestic_stock')
     user = serializers.CharField(source='user.user_nickname')
 
     class Meta:
