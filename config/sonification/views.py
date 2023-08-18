@@ -1159,6 +1159,7 @@ def sell(request):
         user_stock.save()
         if user_stock.having_quantity <=0:
             user_stock.delete()
+            purchase_histories.delete()
     else:
         return Response({"error": "종목 보유량보다 큰 값을 입력 받았습니다"}, status=400)
 
