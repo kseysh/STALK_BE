@@ -3,7 +3,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.conf import settings
 import requests, mojito, os
 import numpy as np
-
+from django.db.models import Sum
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -973,7 +973,7 @@ def f_now_data(request):
 def user_info(request):
     try:
         # user = request.user
-        user = User.objects.get(id=2)
+        user = User.objects.get(id=1)
         user_liked_stocks = Stock.objects.filter(liked_user=user)
         liked_stock_data=[]
         for stock in user_liked_stocks:
@@ -984,6 +984,7 @@ def user_info(request):
                 image_url = 'https://stalksound.store/image/default.jpg'
             data =  {'prdt_name': stock.name, 'code': stock.symbol, 'is_domestic_stock': stock.is_domestic_stock ,'stock_image':image_url}
             liked_stock_data.append(data)
+    
         try:
             user_stocks = UserStock.objects.filter(user=user)
             user_stock_data = []
@@ -1001,20 +1002,64 @@ def user_info(request):
                     'stock_image':image_url,
 
                 })
-
-            # user_stock_data = UserStockSerializer(user_stocks, many=True).data
+            stock_symbols = [user_stock.stock.symbol for user_stock in user_stocks]
+            exchange_rate = get_exchange_rate(request)
+            for stock_symbol in stock_symbols:
+                if stock_symbol.isdigit():
+                    broker = mojito.KoreaInvestment(
+                    api_key=key,
+                    api_secret=secret,
+                    acc_no=acc_no,
+                    exchange="서울",
+                    mock=True
+                    )
+                    resp = broker.fetch_price(stock_symbol)
+                    if user_stocks is not None:
+                        for user_stock in user_stocks:
+                            if user_stock.having_quantity >= 1:
+                                now_stock_price=int(resp['output']['stck_prpr']) * user_stock.having_quantity
+                                user_stock.profit_loss = user_stock.price - now_stock_price
+                                user_stock.now_price = now_stock_price
+                                user_stock.rate_profit_loss=(now_stock_price-user_stock.price)/user_stock.price*100
+                                user_stock.save()
+                    else:
+                        pass
+                else:
+                    broker = mojito.KoreaInvestment(
+                    api_key=key,
+                    api_secret=secret,
+                    acc_no=acc_no,
+                    exchange="나스닥",
+                    mock=True
+                    )
+                    resp = broker.fetch_oversea_price(stock_symbol)
+                    if user_stocks is not None:
+                            for user_stock in user_stocks:
+                                if user_stock.having_quantity >= 1:
+                                    now_stock_price=int(float(resp['output']['last'])*float(exchange_rate)) * user_stock.having_quantity
+                                    user_stock.profit_loss = user_stock.price - now_stock_price
+                                    user_stock.now_price = now_stock_price
+                                    user_stock.rate_profit_loss=((now_stock_price-user_stock.price)/user_stock.price)*100
+                                    user_stock.save()
+                    else:
+                        pass
         except UserStock.DoesNotExist:
             user_stock_data = None
+        
         try:
             record = Record.objects.filter(user=user)
             record_data = RecordSerializer(record, many=True).data
         except Record.DoesNotExist:
             record_data = None
+        
+
+        total_now_price = UserStock.objects.filter(user=user).aggregate(total_now_price=Sum('now_price'))['total_now_price'] or 0.0
 
         user_data = {
             'username': user.username,
             'user_nickname': user.user_nickname,
             'user_property': user.user_property,
+            '총자산' : total_now_price
         }
         
         return Response({'유저정보': user_data,'찜한목록': liked_stock_data,'모의투자한 종목' : user_stock_data , '거래 기록' : record_data})
@@ -1065,7 +1110,7 @@ def sell(request):
         to_price = int(float((resp['output']['last']))*float(exchange_rate))*quantity
     per_one_price = to_price/quantity
     # user = request.user
-    user = User.objects.get(id=2)
+    user = User.objects.get(id=1)
     if(quantity<=0):
         return Response({"error": "양수값을 넣어라"})
     try:
@@ -1098,9 +1143,9 @@ def sell(request):
         user_stock.price = user_stock.having_quantity*avg_price
         user_stock.now_price = user_stock.having_quantity*per_one_price
         user.save()
+        user_stock.save()
         if user_stock.having_quantity <=0:
             user_stock.delete()
-        user_stock.save()
     else:
         return Response({"error": "종목 보유량보다 큰 값을 입력 받았습니다"}, status=400)
 
@@ -1160,7 +1205,7 @@ def buy(request):
         to_price = int(float(resp['output']['last'])*float(exchange_rate))*quantity
     per_one_price = to_price/quantity
     # user = request.user
-    user = User.objects.get(id=2)
+    user = User.objects.get(id=1)
     if(quantity<=0):
         return Response({"error": "양수값을 넣어라"})
     try:
@@ -1193,6 +1238,7 @@ def buy(request):
     try:
         user_stock = UserStock.objects.get(user=user, stock=stock)
         user_stock.having_quantity += quantity
+        user_stock.save()
         user_stock.price = avg_price * user_stock.having_quantity
         user_stock.now_price = user_stock.having_quantity*per_one_price
         user_stock.save()
