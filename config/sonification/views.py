@@ -1097,6 +1097,10 @@ def user_info(request):
 def sell(request):
     stock_symbol = request.data.get('stock_symbol')
     quantity = request.data.get('quantity')
+    user_id = check_jwt(request)
+    if user_id==0:
+        return Response({"detail":"잘못된 로그인 정보입니다."},status=401)
+    user = User.objects.get(id=user_id)
     exchange_rate = get_exchange_rate(request)
     if stock_symbol.isdigit(): #숫자일때, 국내
         broker = mojito.KoreaInvestment(
@@ -1196,6 +1200,10 @@ def sell(request):
 def buy(request):
     stock_symbol = request.data.get('stock_symbol')
     quantity = request.data.get('quantity')
+    user_id = check_jwt(request)
+    if user_id==0:
+        return Response({"detail":"잘못된 로그인 정보입니다."},status=401)
+    user = User.objects.get(id=user_id)
     exchange_rate = get_exchange_rate(request)
     if stock_symbol.isdigit():#숫자일때, 국내
         broker = mojito.KoreaInvestment(
@@ -1307,7 +1315,6 @@ def like_stock(request):
         stock = Stock.objects.get(symbol=stock_symbol)
     except Stock.DoesNotExist:
         return Response(status=404)
-
     user_id = check_jwt(request)
     if user_id==0:
         return Response({"detail":"잘못된 로그인 정보입니다."},status=401)
