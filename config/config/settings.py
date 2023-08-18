@@ -24,7 +24,7 @@ KAKAO_REST_API_KEY = get_secret('KAKAO_REST_API_KEY')
 
 
 AUTH_USER_MODEL = 'accounts.User'
-DEBUG = True
+DEBUG = False
 
 SOCIALACCOUNT_LOGIN_ON_GET = True # 중간 창 없이 카카오 로그인 페이지로 넘어가게 하는 설정
 
@@ -137,11 +137,31 @@ MEDIA_URL = '/image/'
 MEDIA_ROOT = os.path.join(BASE_DIR,'image')
 
 CORS_ALLOWED_ORIGINS = [
+    'https://inhastalk.pages.dev',
     'http://localhost:3000',
     'http://127.0.0.1:8000',
     'https://stalksound.store',
-    'https://stalk-login-test.pages.dev',
-    'http://localhost:8000',
+]
+
+CORS_ALLOW_METHODS  =  [ 
+    'DELETE' , 
+    'GET' , 
+    'OPTIONS' , 
+    'PATCH' , 
+    'POST' , 
+    'PUT' , 
+]
+
+CORS_ALLOW_HEADERS  =  [ 
+    'accept' , 
+    'accept-encoding' , 
+    'authorization' , 
+    'content-type' , 
+    'dnt' , 
+    'origin' , 
+    'user-agent' , 
+    'x-csrftoken' , 
+    'x-requested-with' , 
 ]
 
 CORS_ALLOW_CREDENTIALS = True # True여야 쿠키가 cross-site HTTP 요청에 포함될 수 있다

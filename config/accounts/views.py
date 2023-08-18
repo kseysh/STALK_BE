@@ -22,7 +22,8 @@ from sonification.serializers import RecordSerializer, UserStockSerializer
 # KAKAO_CALLBACK_URI = 'https://stalksound.store/accounts/kakao/callback'
 # KAKAO_CALLBACK_URI = 'http://127.0.0.1:8000/accounts/kakao/callback'
 # KAKAO_CALLBACK_URI = 'http://localhost:3000/kakao/callback'
-KAKAO_CALLBACK_URI = 'https://stalk-login-test.pages.dev/kakao/callback'
+# KAKAO_CALLBACK_URI = 'https://stalk-login-test.pages.dev/kakao/callback'
+KAKAO_CALLBACK_URI = 'https://inhastalk.pages.dev/kakao/callback'
 
 @api_view(['GET'])
 def kakao_login(request): # 백엔드 테스트용 login 코드 이 코드는 프론트에서 처리하도록 하기
@@ -125,7 +126,9 @@ def kakao_logout(self):
 
 def check_jwt(request):
     try:
+        print("check access")
         access = request.COOKIES['accessToken']
+        print("check_jwt : access",access)
         payload = jwt.decode(access, settings.SECRET_KEY, algorithms=['HS256'])
         username = payload.get('username')
         user = get_object_or_404(User, username=username)
@@ -147,6 +150,7 @@ def check_jwt(request):
             res.set_cookie("refreshToken", value=refresh, max_age=None, expires=None, secure=True, samesite="None",httponly=True)
             return user.id
         else:
+            print("wrong jwt")
             return 0
 
 @api_view(['GET'])

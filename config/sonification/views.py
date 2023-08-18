@@ -19,6 +19,8 @@ from drf_yasg.openapi import Schema, TYPE_ARRAY, TYPE_NUMBER
 from io import BytesIO
 from scipy.io import wavfile
 from django.http import HttpResponse, JsonResponse
+
+from accounts.views import check_jwt
 from .serializers import StockSerializer, RecordSerializer, UserStockSerializer
 
 from accounts.models import User
@@ -386,7 +388,6 @@ def f_a_day_data(request):
             '해당일 업종 저가': dp['ovrs_nmix_lwpr'],
             '환율':exchange_rate,
         }
-        print(chart_data)
         chart.append(float(dp['ovrs_nmix_prpr']))
         data.append(chart_data)
         mx = max(mx,float(dp['ovrs_nmix_hgpr']))
@@ -962,6 +963,9 @@ def f_now_data(request):
 ###############################TRANSACTION#################################
 
 ####유저 정보####
+
+
+
 @swagger_auto_schema(
     method='get',
     operation_id='사용자의 정보 조회',
@@ -969,11 +973,12 @@ def f_now_data(request):
     tags=['내정보'],
 )
 @api_view(['GET'])
-# @permission_classes([permissions.IsAuthenticated])
 def user_info(request):
     try:
-        # user = request.user
-        user = User.objects.get(id=1)
+        user_id = check_jwt(request)
+        if user_id==0:
+            return Response({"detail":"잘못된 로그인 정보입니다."},status=401)
+        user = User.objects.get(id=user_id)
         user_liked_stocks = Stock.objects.filter(liked_user=user)
         liked_stock_data=[]
         for stock in user_liked_stocks:
@@ -982,12 +987,53 @@ def user_info(request):
                 image_url = f'https://stalksound.store/image/{stock.symbol}.jpg'
             else:
                 image_url = 'https://stalksound.store/image/default.jpg'
-            data =  {'prdt_name': stock.name, 'code': stock.symbol, 'is_domestic_stock': stock.is_domestic_stock ,'stock_image':image_url}
+            data =  {'prdt_name': stock.name, 'code': stock.symbol, 'is_domestic_stock': stock.is_domestic_stock ,'stock_image':image_url, }
             liked_stock_data.append(data)
     
         try:
             user_stocks = UserStock.objects.filter(user=user)
             user_stock_data = []
+            
+            exchange_rate = get_exchange_rate(request)
+            for user_stock in user_stocks:
+                if user_stock.stock.symbol.isdigit():
+                    broker = mojito.KoreaInvestment(
+                    api_key=key,
+                    api_secret=secret,
+                    acc_no=acc_no,
+                    exchange="서울",
+                    mock=True
+                    )
+                    resp = broker.fetch_price(user_stock.stock.symbol)
+                    if user_stocks is not None:
+                        if user_stock.having_quantity >= 1:
+                            now_stock_price=int(resp['output']['stck_prpr']) * user_stock.having_quantity
+                            user_stock.profit_loss = user_stock.price - now_stock_price
+                            user_stock.now_price = now_stock_price
+                            user_stock.rate_profit_loss=(now_stock_price-user_stock.price)/user_stock.price*100
+                            print(user_stock.stock.name)
+                            user_stock.save()
+                    else:
+                        pass
+                else:
+                    broker = mojito.KoreaInvestment(
+                    api_key=key,
+                    api_secret=secret,
+                    acc_no=acc_no,
+                    exchange="나스닥",
+                    mock=True
+                    )
+                    resp = broker.fetch_oversea_price(user_stock.stock.symbol)
+                    if user_stocks is not None:
+                        if user_stock.having_quantity >= 1:
+                            now_stock_price=int(float(resp['output']['last'])*float(exchange_rate)) * user_stock.having_quantity
+                            user_stock.profit_loss = user_stock.price - now_stock_price
+                            user_stock.now_price = now_stock_price
+                            user_stock.rate_profit_loss=((now_stock_price-user_stock.price)/user_stock.price)*100
+                            print(user_stock.stock.name)
+                            user_stock.save()
+                    else:
+                        pass
             for user_stock in user_stocks:
                 image_path = os.path.join(settings.MEDIA_ROOT, f'{user_stock.stock.symbol}.jpg')
                 if os.path.isfile(image_path):
@@ -1000,49 +1046,12 @@ def user_info(request):
                     'is_domestic_stock':user_stock.stock.is_domestic_stock,
                     'user':user_stock.user.user_nickname,
                     'stock_image':image_url,
-
+                    'having_quantity': user_stock.having_quantity,
+                    'price' : user_stock.price,
+                    'now_price' : user_stock.now_price,
+                    'profit_loss' : user_stock.profit_loss,
+                    'rate_profit_loss' : user_stock.rate_profit_loss
                 })
-            stock_symbols = [user_stock.stock.symbol for user_stock in user_stocks]
-            exchange_rate = get_exchange_rate(request)
-            for stock_symbol in stock_symbols:
-                if stock_symbol.isdigit():
-                    broker = mojito.KoreaInvestment(
-                    api_key=key,
-                    api_secret=secret,
-                    acc_no=acc_no,
-                    exchange="서울",
-                    mock=True
-                    )
-                    resp = broker.fetch_price(stock_symbol)
-                    if user_stocks is not None:
-                        for user_stock in user_stocks:
-                            if user_stock.having_quantity >= 1:
-                                now_stock_price=int(resp['output']['stck_prpr']) * user_stock.having_quantity
-                                user_stock.profit_loss = user_stock.price - now_stock_price
-                                user_stock.now_price = now_stock_price
-                                user_stock.rate_profit_loss=(now_stock_price-user_stock.price)/user_stock.price*100
-                                user_stock.save()
-                    else:
-                        pass
-                else:
-                    broker = mojito.KoreaInvestment(
-                    api_key=key,
-                    api_secret=secret,
-                    acc_no=acc_no,
-                    exchange="나스닥",
-                    mock=True
-                    )
-                    resp = broker.fetch_oversea_price(stock_symbol)
-                    if user_stocks is not None:
-                            for user_stock in user_stocks:
-                                if user_stock.having_quantity >= 1:
-                                    now_stock_price=int(float(resp['output']['last'])*float(exchange_rate)) * user_stock.having_quantity
-                                    user_stock.profit_loss = user_stock.price - now_stock_price
-                                    user_stock.now_price = now_stock_price
-                                    user_stock.rate_profit_loss=((now_stock_price-user_stock.price)/user_stock.price)*100
-                                    user_stock.save()
-                    else:
-                        pass
         except UserStock.DoesNotExist:
             user_stock_data = None
         
@@ -1066,6 +1075,7 @@ def user_info(request):
     
     except User.DoesNotExist:
         return Response({'error': '로그인 하세요.'}, status=403)
+
 
 ####매도####
 @swagger_auto_schema(
@@ -1109,8 +1119,11 @@ def sell(request):
         resp = broker.fetch_oversea_price(stock_symbol)
         to_price = int(float((resp['output']['last']))*float(exchange_rate))*quantity
     per_one_price = to_price/quantity
-    # user = request.user
-    user = User.objects.get(id=1)
+    user_id = check_jwt(request)
+    if user_id==0:
+        return Response({"detail":"잘못된 로그인 정보입니다."},status=401)
+    user = User.objects.get(id=user_id)
+    # user = User.objects.get(id=2)
     if(quantity<=0):
         return Response({"error": "양수값을 넣어라"})
     try:
@@ -1204,8 +1217,11 @@ def buy(request):
         resp = broker.fetch_oversea_price(stock_symbol)
         to_price = int(float(resp['output']['last'])*float(exchange_rate))*quantity
     per_one_price = to_price/quantity
-    # user = request.user
-    user = User.objects.get(id=1)
+    user_id = check_jwt(request)
+    if user_id==0:
+        return Response({"detail":"잘못된 로그인 정보입니다."},status=401)
+    user = User.objects.get(id=user_id)
+    # user = User.objects.get(id=1)
     if(quantity<=0):
         return Response({"error": "양수값을 넣어라"})
     try:
@@ -1291,8 +1307,11 @@ def like_stock(request):
     except Stock.DoesNotExist:
         return Response(status=404)
 
-    # user = request.user
-    user = User.objects.get(id=2)
+    user_id = check_jwt(request)
+    if user_id==0:
+        return Response({"detail":"잘못된 로그인 정보입니다."},status=401)
+    user = User.objects.get(id=user_id)
+    # user = User.objects.get(id=2)
     if user in stock.liked_user.all():
         stock.liked_user.remove(user)
         return Response({'message': '찜 취소 완료'})
@@ -1359,7 +1378,11 @@ class CheckIsLike(APIView):
     stock_name= openapi.Parameter('stock_name', openapi.IN_QUERY, description='종목 이름', required=True, type=openapi.TYPE_STRING)
     @swagger_auto_schema(tags=['좋아요가 눌려져 있는 주식인지 확인하는 기능'],manual_parameters=[stock_name], responses={200: 'Success'})
     def get(self, request):
-        user = User.objects.get(id=2) # 나중에 변경하기
+        user_id = check_jwt(request)
+        if user_id==0:
+            return Response({"detail":"잘못된 로그인 정보입니다."},status=401)
+        user = User.objects.get(id=user_id)
+        # user = User.objects.get(id=2)
         stock_name = request.GET.get("stock_name")
         stock = Stock.objects.get(symbol=stock_name)
         if user in stock.liked_user.all():
