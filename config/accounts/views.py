@@ -56,7 +56,9 @@ def kakao_callback(request):
     access_token = token_req_json["access_token"]
     profile_request = requests.get(
         "https://kapi.kakao.com/v2/user/me", 
-        headers={"Authorization": f"Bearer ${access_token}",})
+        headers={"Authorization": f'Bearer {access_token}',
+                 'Content-type': 'application/x-www-form-urlencoded;charset=utf-8'
+                 })
     if profile_request.status_code == 200:
         profile_json = profile_request.json()
         error = profile_json.get("error")
@@ -73,6 +75,8 @@ def kakao_callback(request):
         token = TokenObtainPairSerializer.get_token(user)
         refresh_token = str(token)
         access_token = str(token.access_token)
+        access_token = access_token
+
         res = Response(
             {
                 "user": user_serializer.data,
@@ -97,7 +101,6 @@ def kakao_callback(request):
         token = TokenObtainPairSerializer.get_token(user)
         refresh_token = str(token)
         access_token = str(token.access_token)
-        access_token = "Bearer " + access_token
         res = Response(
             {
                 "user": user_serializer.data,

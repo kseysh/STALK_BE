@@ -24,7 +24,7 @@ KAKAO_REST_API_KEY = get_secret('KAKAO_REST_API_KEY')
 
 
 AUTH_USER_MODEL = 'accounts.User'
-DEBUG = False
+DEBUG = True
 
 SOCIALACCOUNT_LOGIN_ON_GET = True # 중간 창 없이 카카오 로그인 페이지로 넘어가게 하는 설정
 
@@ -209,7 +209,6 @@ SIMPLE_JWT = {
     'JWK_URL': None,
     "TOKEN_OBTAIN_SERIALIZER": "config.serializers.MyTokenObtainPairSerializer",
 
-    'AUTH_HEADER_TYPES': ('Bearer',),
     'USER_ID_FIELD': 'username',
     'USER_ID_CLAIM': 'username',
 

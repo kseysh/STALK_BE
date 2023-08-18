@@ -974,11 +974,15 @@ def f_now_data(request):
 )
 @api_view(['GET'])
 def user_info(request):
+    print("user_info start")
     try:
         user_id = check_jwt(request)
+        print("user_id",user_id)
         if user_id==0:
+            print("wrong_info",user_id)
             return Response({"detail":"잘못된 로그인 정보입니다."},status=401)
         user = User.objects.get(id=user_id)
+        print("user ok", user)
         user_liked_stocks = Stock.objects.filter(liked_user=user)
         liked_stock_data=[]
         for stock in user_liked_stocks:
