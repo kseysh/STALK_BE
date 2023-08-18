@@ -1,14 +1,15 @@
 import requests, jwt
 
-from django.shortcuts import redirect
+from django.shortcuts import get_object_or_404, redirect
 from django.conf import settings
 from django.http import JsonResponse
 
 from rest_framework import status,permissions 
 from rest_framework.response import Response
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenRefreshSerializer
-from rest_framework.decorators import api_view,permission_classes
+from rest_framework.decorators import api_view,permission_classes,authentication_classes
 from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework.authentication import SessionAuthentication, BasicAuthentication
 
 from .models import User
 from sonification.models import Stock, Record, UserStock
@@ -119,35 +120,34 @@ def kakao_logout(self):
         }, status=status.HTTP_202_ACCEPTED)
     response.delete_cookie("accessToken")
     response.delete_cookie("refreshToken")
+
     return response
 
-# @api_view(['GET'])
-# @permission_classes([permissions.IsAuthenticated])
-# def user_info(request):
-#     try:
-#         access = request.COOKIES['accessToken']
-#         payload = jwt.decode(access, settings.SECRET_KEY, algorithms=['HS256'])
-#         username = payload.get('username')
-#         user = get_object_or_404(User, username=username)
-#         serializer = UserSerializer(instance=user)
-#         return Response(serializer.data, status=status.HTTP_200_OK)
+def check_jwt(request):
+    try:
+        access = request.COOKIES['accessToken']
+        payload = jwt.decode(access, settings.SECRET_KEY, algorithms=['HS256'])
+        username = payload.get('username')
+        user = get_object_or_404(User, username=username)
+        user_id = user.id
+        return user_id
 
-#     except(jwt.exceptions.ExpiredSignatureError):
-#         data = {'refresh': request.COOKIES.get('refreshToken', None)}
-#         serializer = TokenRefreshSerializer(data=data)
-#         if serializer.is_valid(raise_exception=True):
-#             access = serializer.data.get('accessToken', None)
-#             refresh = serializer.data.get('refreshToken', None)
-#             payload = jwt.decode(access, settings.SECRET_KEY, algorithms=['HS256'])
-#             username = payload.get('username')
-#             user = get_object_or_404(User, username=username)
-#             serializer = UserSerializer(instance=user)
-#             res = Response(serializer.data, status=status.HTTP_200_OK)
-#             res.set_cookie("accessToken", value=access, max_age=None, expires=None, secure=True, samesite="None", httponly=True)
-#             res.set_cookie("refreshToken", value=refresh, max_age=None, expires=None, secure=True, samesite="None",httponly=True)
-
-#             return res
-#         raise jwt.exceptions.InvalidTokenError
+    except(jwt.exceptions.ExpiredSignatureError):
+        data = {'refresh': request.COOKIES.get('refreshToken', None)}
+        serializer = TokenRefreshSerializer(data=data)
+        if serializer.is_valid(raise_exception=True):
+            access = serializer.data.get('accessToken', None)
+            refresh = serializer.data.get('refreshToken', None)
+            payload = jwt.decode(access, settings.SECRET_KEY, algorithms=['HS256'])
+            username = payload.get('username')
+            user = get_object_or_404(User, username=username)
+            serializer = UserSerializer(instance=user)
+            res = Response(serializer.data)
+            res.set_cookie("accessToken", value=access, max_age=None, expires=None, secure=True, samesite="None", httponly=True)
+            res.set_cookie("refreshToken", value=refresh, max_age=None, expires=None, secure=True, samesite="None",httponly=True)
+            return user.id
+        else:
+            return 0
 
 @api_view(['GET'])
 def temp_user_login(request):
@@ -179,11 +179,13 @@ def winner_winner_chicken_dinner(request):
 
 
 @api_view(['GET'])
-@permission_classes([permissions.IsAuthenticated])
 def user_info(request):
     try:
-        user = request.user
-        # user = User.objects.get(id=2)
+        user_id = check_jwt(request)
+        if user_id==0:
+            return Response({"detail":"잘못된 로그인 정보입니다."},status=401)
+        user = User.objects.get(id=user_id)
+
         user_liked_stocks = Stock.objects.filter(liked_user=user)
         liked_stock_data = [{'prdt_name': stock.name, 'code': stock.symbol, 'is_domestic_stock': stock.is_domestic_stock} for stock in user_liked_stocks]
         try:
