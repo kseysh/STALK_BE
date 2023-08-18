@@ -86,7 +86,7 @@ def f_transaction_rank(request):
     
     for item in response_data['output2']:
         image_path = os.path.join(settings.MEDIA_ROOT, f'{item["symb"]}.jpg')
-        if os.path.exists(image_path) or os.path.isfile(image_path):
+        if os.path.isfile(image_path):
             image_url = f'https://stalksound.store/image/{item["symb"]}.jpg'
         else:
             image_url = 'https://stalksound.store/image/default.jpg'
@@ -149,7 +149,7 @@ def transaction_rank(request):
     transaction_data_list = []
     for item in response_data['output2']:
         image_path = os.path.join(settings.MEDIA_ROOT, f'{item["code"]}.jpg')
-        if os.path.exists(image_path) or os.path.isfile(image_path):
+        if os.path.isfile(image_path):
             image_url = f'https://stalksound.store/image/{item["code"]}.jpg'
         else:
             image_url = 'https://stalksound.store/image/default.jpg'
@@ -160,7 +160,7 @@ def transaction_rank(request):
             '현재가':float(item['price']),
             '전일 대비율': float(item['chgrate']),
             '대비': float(item['change']),
-            '이미지URL': f'https://stalksound.store/image/{item["code"]}.jpg'
+            '이미지URL': image_url,
         }
         try:
             stock = Stock.objects.get(
@@ -975,10 +975,34 @@ def user_info(request):
         # user = request.user
         user = User.objects.get(id=2)
         user_liked_stocks = Stock.objects.filter(liked_user=user)
-        liked_stock_data = [{'prdt_name': stock.name, 'code': stock.symbol, 'is_domestic_stock': stock.is_domestic_stock} for stock in user_liked_stocks]
+        liked_stock_data=[]
+        for stock in user_liked_stocks:
+            image_path = os.path.join(settings.MEDIA_ROOT, f'{stock.symbol}.jpg')
+            if os.path.isfile(image_path):
+                image_url = f'https://stalksound.store/image/{stock.symbol}.jpg'
+            else:
+                image_url = 'https://stalksound.store/image/default.jpg'
+            data =  {'prdt_name': stock.name, 'code': stock.symbol, 'is_domestic_stock': stock.is_domestic_stock ,'stock_image':image_url}
+            liked_stock_data.append(data)
         try:
             user_stocks = UserStock.objects.filter(user=user)
-            user_stock_data = UserStockSerializer(user_stocks, many=True).data
+            user_stock_data = []
+            for user_stock in user_stocks:
+                image_path = os.path.join(settings.MEDIA_ROOT, f'{user_stock.stock.symbol}.jpg')
+                if os.path.isfile(image_path):
+                    image_url = f'https://stalksound.store/image/{user_stock.stock.symbol}.jpg'
+                else:
+                    image_url = 'https://stalksound.store/image/default.jpg'
+                user_stock_data.append({
+                    'stock':user_stock.stock.name,
+                    'stock_code':user_stock.stock.symbol,
+                    'is_domestic_stock':user_stock.stock.is_domestic_stock,
+                    'user':user_stock.user.user_nickname,
+                    'stock_image':image_url,
+
+                })
+
+            # user_stock_data = UserStockSerializer(user_stocks, many=True).data
         except UserStock.DoesNotExist:
             user_stock_data = None
         try:
