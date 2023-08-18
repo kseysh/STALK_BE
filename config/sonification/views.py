@@ -975,10 +975,34 @@ def user_info(request):
         # user = request.user
         user = User.objects.get(id=2)
         user_liked_stocks = Stock.objects.filter(liked_user=user)
-        liked_stock_data = [{'prdt_name': stock.name, 'code': stock.symbol, 'is_domestic_stock': stock.is_domestic_stock} for stock in user_liked_stocks]
+        liked_stock_data=[]
+        for stock in user_liked_stocks:
+            image_path = os.path.join(settings.MEDIA_ROOT, f'{stock.symbol}.jpg')
+            if os.path.isfile(image_path):
+                image_url = f'https://stalksound.store/image/{stock.symbol}.jpg'
+            else:
+                image_url = 'https://stalksound.store/image/default.jpg'
+            data =  {'prdt_name': stock.name, 'code': stock.symbol, 'is_domestic_stock': stock.is_domestic_stock ,'stock_image':image_url}
+            liked_stock_data.append(data)
         try:
             user_stocks = UserStock.objects.filter(user=user)
-            user_stock_data = UserStockSerializer(user_stocks, many=True).data
+            user_stock_data = []
+            for user_stock in user_stocks:
+                image_path = os.path.join(settings.MEDIA_ROOT, f'{user_stock.stock.symbol}.jpg')
+                if os.path.isfile(image_path):
+                    image_url = f'https://stalksound.store/image/{user_stock.stock.symbol}.jpg'
+                else:
+                    image_url = 'https://stalksound.store/image/default.jpg'
+                user_stock_data.append({
+                    'stock':user_stock.stock.name,
+                    'stock_code':user_stock.stock.symbol,
+                    'is_domestic_stock':user_stock.stock.is_domestic_stock,
+                    'user':user_stock.user.user_nickname,
+                    'stock_image':image_url,
+
+                })
+
+            # user_stock_data = UserStockSerializer(user_stocks, many=True).data
         except UserStock.DoesNotExist:
             user_stock_data = None
         try:
