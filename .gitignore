@@ -1,6 +1,12 @@
 venv
 secrets.json
+.vscode
 migrations
 __pycache__
 __init__.py
 db.sqlite3
+static
+token.dat
+koreainvestment.key
+.DS_Store
+image
