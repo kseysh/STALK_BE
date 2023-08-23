@@ -39,5 +39,7 @@ STOCK (주식) + TALK (말하다) => STALK
 ![image](https://github.com/kseysh/STALK_BE/assets/69035864/c5f3a3b0-3068-4ab8-85ef-68c43d2e1c3d)
 ### 거래
 ![image](https://github.com/kseysh/STALK_BE/assets/69035864/16e8b5ea-219a-4e66-b38f-7b13ae44143f)
+## 주식 음성화 예시
+<img src="https://github.com/kseysh/STALK_BE/assets/69035864/b653527b-f238-42f6-b4a3-0f5fc80a389c" width="100" height="100">
 
 
