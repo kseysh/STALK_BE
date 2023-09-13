@@ -42,7 +42,9 @@ INSTALLED_APPS = [
     'django.contrib.sites',
     # my app
     'accounts',
-    'sonification',
+    'transaction',
+    'foreignstocks',
+    'koreanstocks',
     'news',
 
     # third party app
