@@ -41,6 +41,13 @@ broker = mojito.KoreaInvestment(
     mock=True
 )
 
+#사인파 만드는 함수
+def generate_sine_wave(duration, frequency, sample_rate=44100):
+    t = np.linspace(0, duration, int(sample_rate * duration), False)
+    data = 0.5 * np.sin(2 * np.pi * frequency * t)
+    scaled_data = (data * 32767).astype(np.int16)
+    return scaled_data
+
 def get_exchange_rate(request):
     payload=""
     headers = {
@@ -450,17 +457,9 @@ def data_to_sound(request):
     data = request.data.get('lista')
     duration = 0.4
     result = generate_sine_wave(0.1, 0)  # 사인파들을 numpy.ndarray 형태로 받아올 빈 numpy.ndarray
-    # for i in data:
-    #     sine = generate_sine_wave(duration, i)
-    #     result = np.concatenate((result, sine))
-    # log_data = np.log(np.array(data) - min(data) + 1)
-    # max_log_value = max(log_data)
-    # min_log_value = min(log_data)
-    # adjusted_data = [(x - min_log_value) / (max_log_value - min_log_value) * 1000 for x in log_data]
     min_value = min(data)
     max_value = max(data)
     adjusted_data = [(value - min_value-70) / (max_value - min_value) * 2000 for value in data]
-
     
     for i in adjusted_data:
         # 스케일을 조정하여 큰 값으로 변환
@@ -475,7 +474,6 @@ def data_to_sound(request):
     response['Content-Disposition'] = 'attachment; filename="output.wav"'
     response.write(wav_bytes)
     return response
-
 
 class CheckIsLike(APIView): 
     stock_name= openapi.Parameter('stock_name', openapi.IN_QUERY, description='종목 이름', required=True, type=openapi.TYPE_STRING)
@@ -492,7 +490,6 @@ class CheckIsLike(APIView):
             return Response({'message': True}, status=200)
         else:
             return Response({'message': False}, status=200)
-
 
 @swagger_auto_schema(
     method='post',
@@ -531,9 +528,6 @@ def speech_to_text(request):
     rescode = response.status_code
     if rescode == 200:
         return Response(response.text)
-
-
-
 
 @swagger_auto_schema(
     method='get',
@@ -613,7 +607,6 @@ def create_stock_database(request):
             f_transaction_data_list.append(data)
         except IntegrityError:
             pass
-        
 
     return Response({'국내 시가총액 순위': transaction_data_list,
                     '해외 시가총액 순위': f_transaction_data_list,})

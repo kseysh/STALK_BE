@@ -41,6 +41,8 @@ broker = mojito.KoreaInvestment(
     mock=True
 )
 
+payload = []
+
 #값의 변화량을 주파수로 치환하는 함수
 def substitution(mx,mn,chart):
     lista = []
