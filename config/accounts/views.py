@@ -12,9 +12,9 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.authentication import SessionAuthentication, BasicAuthentication
 
 from .models import User
-from sonification.models import Stock, Record, UserStock
+from transaction.models import Stock, Record, UserStock
 from .serializers import UserSerializer
-from sonification.serializers import RecordSerializer, UserStockSerializer
+from transaction.serializers import RecordSerializer, UserStockSerializer
 
 
 # BASE_URL = 'https://stalksound.store/'

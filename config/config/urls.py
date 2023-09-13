@@ -25,7 +25,9 @@ urlpatterns = [
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
 
     path('accounts/', include('accounts.urls')),
-    path('sonification/', include("sonification.urls")),
+    path('sonification/', include("transaction.urls")),
+    path('koreanstocks/', include("koreanstocks.urls")),
+    path('foreignstocks/', include("foreignstocks.urls")),
     path('news/',include('news.urls')),
     
     re_path(r'^image/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),

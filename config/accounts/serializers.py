@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from accounts.models import User    
-from sonification.serializers import StockSerializer
+from transaction.serializers import StockSerializer
 class UserSerializer(serializers.ModelSerializer):
     liked_stock = StockSerializer(many=True)
     class Meta:
